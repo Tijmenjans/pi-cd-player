@@ -1,0 +1,10 @@
+[Unit]
+Description=Reconnect CDspeler IKEA speaker on startup and when it returns
+
+[Timer]
+OnStartupSec=15
+OnUnitInactiveSec=30
+Unit=cdspeler-bluetooth-connect.service
+
+[Install]
+WantedBy=timers.target

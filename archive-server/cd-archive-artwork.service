@@ -1,0 +1,25 @@
+[Unit]
+Description=CD archive exact album artwork for Plex
+After=docker.service network-online.target
+
+[Service]
+Type=simple
+User=cd-archive
+Group=cd-archive
+WorkingDirectory=/opt/cd-archive
+Environment=ARCHIVE_DATA=/data/media/cd-archive
+Environment=ARCHIVE_MUSIC=/data/media/music
+Environment=PLEX_URL=http://127.0.0.1:32400
+Environment="PLEX_PREFS=/data/media/plex/Library/Application Support/Plex Media Server/Preferences.xml"
+ExecStart=/usr/bin/python3 /opt/cd-archive/artwork.py
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/data/media/cd-archive /data/media/music
+UMask=0022
+
+[Install]
+WantedBy=multi-user.target

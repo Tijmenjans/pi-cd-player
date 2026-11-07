@@ -1,0 +1,14 @@
+[Unit]
+Description=Keep Bluetooth powered off for CDspeler
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bluetoothctl --timeout 10 power off
+RemainAfterExit=yes
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=15
+
+[Install]
+WantedBy=default.target

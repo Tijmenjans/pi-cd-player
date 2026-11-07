@@ -1,0 +1,40 @@
+services:
+  archive:
+    build: .
+    container_name: cd-archive
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PLEX_URL: http://plex:32400
+    volumes:
+      - /data/media/cd-archive:/data
+      - /data/media/music:/music
+      - /data/media/plex/Library/Application Support/Plex Media Server/Preferences.xml:/plex/Preferences.xml:ro
+    networks:
+      - coolify
+      - plex
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: coolify
+      traefik.http.routers.cd-archive.rule: Host(`archive.app.tijmenjans.nl`)
+      traefik.http.routers.cd-archive.entrypoints: https
+      traefik.http.routers.cd-archive.tls: "true"
+      traefik.http.routers.cd-archive.tls.certresolver: letsencrypt
+      traefik.http.services.cd-archive.loadbalancer.server.port: "8766"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8766/health',timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    read_only: true
+    tmpfs: ["/tmp:size=64m"]
+    mem_limit: 512m
+    cpus: 1.0
+networks:
+  coolify:
+    external: true
+  plex:
+    external: true
+    name: l0dbpo3rcbqoa0g6oirt9rje

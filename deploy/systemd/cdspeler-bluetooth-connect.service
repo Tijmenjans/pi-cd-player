@@ -1,0 +1,8 @@
+[Unit]
+Description=Reconnect the paired CDspeler IKEA speaker
+After=wireplumber.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/tijmen/cdspeler/bluetooth-connect.py
+TimeoutStartSec=45

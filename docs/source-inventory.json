@@ -1,0 +1,302 @@
+[
+  {
+    "file": "test_queueing.py",
+    "comparison": "added/updated from pi",
+    "sha256": "c90c5a89a972cccc3de797c9ed06da876c84d74e3df9c58b1f4997e2ac4990ea"
+  },
+  {
+    "file": "test_vinyl_transitions.py",
+    "comparison": "identical",
+    "sha256": "60e13075f22687009b13c85a9be0ec717c1f6dadeb1f59c38c733dfad0c088bc"
+  },
+  {
+    "file": "cdspeler-bluetooth-connect.service",
+    "comparison": "added/updated from pi",
+    "sha256": "85a1fc5231a64c1632db105884becd2a02d0803cb97e46926853723155f10cf5"
+  },
+  {
+    "file": "test_vinyl.py",
+    "comparison": "identical",
+    "sha256": "5e5ec266da70a8db04165d2c1627e8b030173beca607b3bae7a77135cf4ef356"
+  },
+  {
+    "file": "live_audio.py",
+    "comparison": "identical",
+    "sha256": "5de2c75cfa7510432ea6fa20177ae4eec7f3e475e354339c046dc215fc122525"
+  },
+  {
+    "file": "vinyl_audio.py",
+    "comparison": "identical",
+    "sha256": "14e5e72b6beb17ffafb1261a490130dc127c6148f33db5996a70b94916a4351d"
+  },
+  {
+    "file": "plexamp.py",
+    "comparison": "added/updated from pi",
+    "sha256": "ad24e83ec28140e9c408d1ff10d51feb7398fba213dd1ff6532cc66e04902254"
+  },
+  {
+    "file": "optical_device.py",
+    "comparison": "identical",
+    "sha256": "686d6be98edd833b4de287c2a1b476b257df0d15e0944e8e1f7bd8171b39f8fa"
+  },
+  {
+    "file": "test_vinyl_api.py",
+    "comparison": "identical",
+    "sha256": "f3ca3e8e856cf621073accd1cb631c5b1a80385b954b2a10360741c305fa36ad"
+  },
+  {
+    "file": "dvd_streaming.py",
+    "comparison": "identical",
+    "sha256": "f0c5a56ebe7c1e1118e060ce653854b6fbbac9acaf5efaabc605175c6d6f2671"
+  },
+  {
+    "file": "spotify-event.py",
+    "comparison": "added/updated from pi",
+    "sha256": "aa79f9147ae6a1cc4d8ae91d5acc59ef1c7f3c9c4a635e9f6e1c79047904b76a"
+  },
+  {
+    "file": "queueing.py",
+    "comparison": "added/updated from pi",
+    "sha256": "29966c5525a258392d9fa52fef6e2fefdc82e350323921ef2ceb97a490487cbf"
+  },
+  {
+    "file": "test_live_mpd.py",
+    "comparison": "added/updated from pi",
+    "sha256": "041b58dac9761ac8eaca17b0a154b047fbe04a859988bba325bef327c03dc0bc"
+  },
+  {
+    "file": "set-spotify-key.py",
+    "comparison": "added/updated from pi",
+    "sha256": "67d2d7b051ed50c8d4442905c1bb3e0ae28ac0d4ec51c803f64598c2a83873de"
+  },
+  {
+    "file": "test_fades_mpd.py",
+    "comparison": "added/updated from pi",
+    "sha256": "6f5190097a372fe73680fce50e7115923d6b552f4237828c76f7c0320e7c813b"
+  },
+  {
+    "file": "cdspeler-plexamp.service",
+    "comparison": "added/updated from pi",
+    "sha256": "c2a306be1ad9b5beb83598f1188a9a4c37a21911e000eeb66f66cac9a9d3d749"
+  },
+  {
+    "file": "bluetooth-connect.py",
+    "comparison": "identical",
+    "sha256": "038a2191e27b2e47304ec8e6ebbff48c956370c57063753fb1b15ef2ddcd2d9e"
+  },
+  {
+    "file": "test_vinyl_audio.py",
+    "comparison": "identical",
+    "sha256": "25854a1206f50765cf649d02a488e43a9d2b3a762c9865d369dee1668b61f2eb"
+  },
+  {
+    "file": "cdspeler-web.service",
+    "comparison": "added/updated from pi",
+    "sha256": "8d768d2d74354b790f3311887b73920576602f9153e4535cbaca7378f0ce02ef"
+  },
+  {
+    "file": "test_handoff.py",
+    "comparison": "added/updated from pi",
+    "sha256": "28246c003dbe8aaee5f3c7c0eb2c42c9ef8dcfa7045d17640e35151db56b9dbc"
+  },
+  {
+    "file": "cdspeler-mpd.service",
+    "comparison": "added/updated from pi",
+    "sha256": "962b8b1e179a4406637dd436396fd8a802c176696e7094c1df35982e6fe24980"
+  },
+  {
+    "file": "vinyl_recognize.py",
+    "comparison": "identical",
+    "sha256": "acda5ddac6f8a741828b8ae7c116748b0ca87e9b225ef38514a3f03cc252b353"
+  },
+  {
+    "file": "mpd.conf",
+    "comparison": "added/updated from pi",
+    "sha256": "ac61510400813dfb39819df98f50dea2dfde43a053aec5e5f84986c9a39c9c64"
+  },
+  {
+    "file": "test_autoplay.py",
+    "comparison": "added/updated from pi",
+    "sha256": "c925eb2139c9c9b36db5c51724170cafd95b24eec148b82fe6c4f0253eb1e6ca"
+  },
+  {
+    "file": "80-cdspeler-bluetooth.conf",
+    "comparison": "added/updated from pi",
+    "sha256": "f1fa77b0957aacc5797933981654528b2539f13f7e489429357b703793d28870"
+  },
+  {
+    "file": "vinyl_transitions.py",
+    "comparison": "identical",
+    "sha256": "2e4a872aa0a13c8f394e8deefd5ab336637b4f5dd413d205c755832147763866"
+  },
+  {
+    "file": "archive_queue.py",
+    "comparison": "identical",
+    "sha256": "7a02219d755152ce9acc148bf51031413b4a3754323f71d458883cc287b4eb97"
+  },
+  {
+    "file": "music_metadata.py",
+    "comparison": "added/updated from pi",
+    "sha256": "0039c8cab087111f1aca4d2254d525e24524cec39adf34289f35ab8b7ef28b47"
+  },
+  {
+    "file": "dvd_metadata.py",
+    "comparison": "identical",
+    "sha256": "5b7a6b01e0cc814bc2fe94f06ed93be5468649e208079346bba91bf8afda63bd"
+  },
+  {
+    "file": "cdspeler-spotify.service",
+    "comparison": "added/updated from pi",
+    "sha256": "400984168923400275a915b97223237d33e9cc6bae6c195d0297daa0d46b3b23"
+  },
+  {
+    "file": "vinyl.py",
+    "comparison": "identical",
+    "sha256": "7ad72fddd8a7e4bea3a7d47dc6b76288b0cfb277259a7757ae9c6fac579695ea"
+  },
+  {
+    "file": "archive.py",
+    "comparison": "identical",
+    "sha256": "b44213a0f41053486872a9caab34fafd89dc7ff60f5e302ee536977a91712a52"
+  },
+  {
+    "file": "app.py",
+    "comparison": "identical",
+    "sha256": "02d076279b42f5ce8d463b6afea772284f6df192b642904432ff0e3e1375c7ce"
+  },
+  {
+    "file": "dvd.py",
+    "comparison": "identical",
+    "sha256": "c36d62e7577927dcc8cfecba2d8b16825561cd1cd73a6dcc7642dc9d82400894"
+  },
+  {
+    "file": "audio.py",
+    "comparison": "identical",
+    "sha256": "d7eb283ce8fc081cbd335bd846cd8c00f2d09cd45a629e84005461149e3a6d1c"
+  },
+  {
+    "file": "90-apple-superdrive.rules",
+    "comparison": "added/updated from pi",
+    "sha256": "b4d8ef6088fd1f4920ca3fb6946a590447c88bb8aab1e71ff008660817e8ed7c"
+  },
+  {
+    "file": "test_api.py",
+    "comparison": "added/updated from pi",
+    "sha256": "c90d78d029d46727ea279d00a0847e89416505c28d5f90e38bc8523a7f801638"
+  },
+  {
+    "file": "cdspeler-bluetooth-off.service",
+    "comparison": "added/updated from pi",
+    "sha256": "9e994645bf60f424ce770f9d8718041cea5b7b550aa688c5a6b093374f520b6d"
+  },
+  {
+    "file": "spotify.py",
+    "comparison": "added/updated from pi",
+    "sha256": "d4c397be96684b0131410b65f9f57132e3e1591e95352635ece1fefbb3917e79"
+  },
+  {
+    "file": "test_streaming_api.py",
+    "comparison": "identical",
+    "sha256": "3c51165fd447fe5586af96d06a9fdd4ecf350d1e5c069d9631b073d5ece8a630"
+  },
+  {
+    "file": "optical_reader.py",
+    "comparison": "identical",
+    "sha256": "38674a5f09033a17695c1abc7030776299c98de2b3390ec1207928a9e266869e"
+  },
+  {
+    "file": "disc_media.py",
+    "comparison": "identical",
+    "sha256": "bed29d640437eac0299fde01bb30823694be203f99730f10cff301a2d5d7ed03"
+  },
+  {
+    "file": "caldera-alsa.conf",
+    "comparison": "added/updated from pi",
+    "sha256": "a729dd7d76b7df20c35c5e75a12dfc0765b32a7abf67388b727f2a8f88ea8cc5"
+  },
+  {
+    "file": "test_pipeline.py",
+    "comparison": "added/updated from pi",
+    "sha256": "5fcfb4d92762c5317eac4689aaf1eef1a65ab92d7a0e6a070b0067be1234150d"
+  },
+  {
+    "file": "cdspeler-bluetooth-connect.timer",
+    "comparison": "added/updated from pi",
+    "sha256": "aab0d639884953d4b015582e5b41eb5df00e6cd89b29fc4baae4b4c7ca03bdb7"
+  },
+  {
+    "file": "test_archive_api.py",
+    "comparison": "added/updated from pi",
+    "sha256": "0908839706f9143cb471cbae7bcb96988d8a2168d1774a1b78f914a646435622"
+  },
+  {
+    "file": "catalogue.py",
+    "comparison": "added/updated from pi",
+    "sha256": "f35ac8d516d696150af9a3d36cd9b22a2d6a3f0dc47cd9c340a2c5ad3514f645"
+  },
+  {
+    "file": "archive-server/silence.py",
+    "comparison": "identical",
+    "sha256": "4f24472a665006d954b86ffd09d913a51e289a5dadbc39144b3fd394d97414c0"
+  },
+  {
+    "file": "archive-server/artwork.py",
+    "comparison": "added/updated from vps",
+    "sha256": "7eb2aa83c22aa351d65c11f769c5b9d571856fce213f8d242fd2f6277a72bca3"
+  },
+  {
+    "file": "archive-server/server.py",
+    "comparison": "identical",
+    "sha256": "c953654f6490c0109c2ad7fe5495d83458f33a4f4a3ca34db293d12ec43761ea"
+  },
+  {
+    "file": "archive-server/Dockerfile",
+    "comparison": "identical",
+    "sha256": "dc4f6b975be06efb4da498da170889fdeb64b1da11ce4327d4fee48a82882f65"
+  },
+  {
+    "file": "archive-server/cd-archive-artwork.service",
+    "comparison": "added/updated from vps",
+    "sha256": "b90017e8db265d448453759f66b98d231841c9e6cbfa5137871d7baa810e8526"
+  },
+  {
+    "file": "archive-server/compose.yaml",
+    "comparison": "identical",
+    "sha256": "ee0365a89d9d7251a2ef319d6a4c8c03fd20edf30488070a7776f5ffbcda22d8"
+  },
+  {
+    "file": "static/app.js",
+    "comparison": "SHA-256 matches live Pi",
+    "sha256": "9301d9adbbae1bf63144eed786f7a83bf648e85a22a46854c9136e1beb0ea0c7"
+  },
+  {
+    "file": "static/style.css",
+    "comparison": "SHA-256 matches live Pi",
+    "sha256": "3de8dce919d98f0ca87df333951f0e352b744ac6763d0e8c25a46a5964f02a6d"
+  },
+  {
+    "file": "static/index.html",
+    "comparison": "SHA-256 matches live Pi",
+    "sha256": "9fc52a255384b70b617a605b140c96fdc618246b78410f739f228b561df1e509"
+  },
+  {
+    "file": "static/theme.js",
+    "comparison": "SHA-256 matches live Pi",
+    "sha256": "c8b22d8990c292ca8423f0a6e3c1ff9f099f86cf6c11a2e38a9930f4b0555284"
+  },
+  {
+    "file": "static/christmas-fire.jpg",
+    "comparison": "SHA-256 matches live Pi",
+    "sha256": "c690a222911d3920b03e11fd60cfcd7b27f9df7dafbb3edc3b7ab051cc0ec36a"
+  },
+  {
+    "file": "catalogue/discogs-1153718.json",
+    "comparison": "SHA-256 matches live Pi",
+    "sha256": "53aab2f71d84f5e1d64b61a58c9d9bdf22dd0988ca1854d6e9ed7b6ea995119a"
+  },
+  {
+    "file": "catalogue/discogs-29930347.json",
+    "comparison": "SHA-256 matches live Pi",
+    "sha256": "74230dda25146e40943c6a8af95ec3d8a7ed457280f45e98d7507474dc38053f"
+  }
+]

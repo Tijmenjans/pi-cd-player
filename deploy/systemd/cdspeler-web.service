@@ -1,0 +1,13 @@
+[Unit]
+Description=CDspeler local web interface
+
+[Service]
+WorkingDirectory=/home/tijmen/cdspeler
+ExecStart=/usr/bin/python3 /home/tijmen/cdspeler/app.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+UMask=0077
+
+[Install]
+WantedBy=default.target

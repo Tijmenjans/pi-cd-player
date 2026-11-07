@@ -1,0 +1,13 @@
+[Unit]
+Description=CDspeler audio-cd engine
+Conflicts=cdspeler-spotify.service cdspeler-plexamp.service
+After=cdspeler-spotify.service
+Requires=pipewire.service wireplumber.service
+After=pipewire.service wireplumber.service
+
+[Service]
+ExecStart=/usr/bin/mpd --no-daemon /home/tijmen/cdspeler/mpd.conf
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+

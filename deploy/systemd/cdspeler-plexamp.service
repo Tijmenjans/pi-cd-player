@@ -1,0 +1,15 @@
+[Unit]
+Description=CDspeler Plexamp receiver (Caldera)
+Conflicts=cdspeler-mpd.service cdspeler-spotify.service
+Requires=pipewire.service wireplumber.service
+After=pipewire.service wireplumber.service
+
+[Service]
+Environment=LD_LIBRARY_PATH=%h/caldera-music/lib
+Environment=ALSA_PLUGIN_DIR=%h/cdspeler/vendor/caldera-audio/usr/lib/arm-linux-gnueabihf/alsa-lib
+Environment=ALSA_CONFIG_PATH=%h/cdspeler/caldera-alsa.conf
+ExecStart=%h/caldera-music/bin/caldera-music --config %h/.config/caldera-music
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+UMask=0077

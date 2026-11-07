@@ -1,0 +1,10 @@
+[Unit]
+Description=Initialize Apple SuperDrive %I
+BindsTo=dev-%i.device
+After=dev-%i.device
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/sg_raw --timeout=5 /dev/%I EA 00 00 00 00 00 01
+TimeoutStartSec=10
+TimeoutStopSec=2
+RemainAfterExit=yes

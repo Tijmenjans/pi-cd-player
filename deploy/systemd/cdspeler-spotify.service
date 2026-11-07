@@ -1,0 +1,15 @@
+[Unit]
+Description=CDspeler Spotify Connect
+Conflicts=cdspeler-mpd.service cdspeler-plexamp.service
+Requires=pipewire.service wireplumber.service
+After=pipewire.service wireplumber.service
+
+[Service]
+EnvironmentFile=/home/tijmen/cdspeler/data/soloist.env
+ExecStart=/home/tijmen/cdspeler/vendor/soloist/soloist --device-name CDspeler --api-key ${SOLOIST_API_KEY} --data-dir /home/tijmen/cdspeler/data/soloist --cache-dir /home/tijmen/cdspeler/data/soloist-cache --cache-size 100 --initial-volume 100 --ws 127.0.0.1:9090
+Restart=on-failure
+RestartSec=5
+RestartPreventExitStatus=10
+NoNewPrivileges=true
+UMask=0077
+

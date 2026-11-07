@@ -1,0 +1,13 @@
+[Unit]
+Description=Vinyl from UFO202 to IKEA Bluetooth speaker
+After=pipewire.service wireplumber.service
+Wants=pipewire.service wireplumber.service
+
+[Service]
+WorkingDirectory=/home/tijmen/cdspeler
+ExecStart=/usr/bin/python3 /home/tijmen/cdspeler/vinyl_audio.py
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=8
+NoNewPrivileges=true
+UMask=0077
