@@ -202,8 +202,21 @@ class Archive:
                     self.states[number]={'storage':'pending','ready':False}
             self.reader_error=None;self.drive_blocked=False;self._save_recovery();self.wake.set()
 
+    def can_detach(self):
+        """A manual eject may keep a complete local pin, never truncate a growing one."""
+        with self.lock:
+            pinned=next((live for live in self.local.values() if live.token==self.selected_local),None)
+            return pinned is None or pinned.complete
+
     def unavailable(self,number):
-        with self.lock:return self.states.get(number,{}).get('storage')=='blocked'
+        with self.lock:
+            return (self.states.get(number,{}).get('storage')=='blocked'
+                    or bool(self.disc and self.disc.get('ejected')
+                            and self.initial_status.is_set() and self.remote
+                            and self.remote.get('id')==self.disc['id'] and not self.server_error
+                            and not self.playable(number)
+                            and not self.states.get(number,{}).get('uploaded')
+                            and (self.disc['id'],number) not in self.inflight))
 
     def prioritize(self, numbers):
         with self.lock:
@@ -271,7 +284,8 @@ class Archive:
             read_messages=[v.get('message') for v in self.states.values() if v.get('storage') in ('error','blocked') and v.get('message')]
             upload_messages=[v.get('message') for v in self.states.values() if v.get('storage')=='retrying_upload' and v.get('message')]
             self.error=('De USB-cd-drive reageert niet. Sluit de drive opnieuw aan; alle opgeslagen nummers blijven bewaard.' if self.drive_blocked else next(iter(read_messages),None) or next(iter(upload_messages),None) or self.server_error)
-            result = {'states':copy.deepcopy(self.states),'error':self.error,
+            result = {'disc_id':self.disc.get('id') if self.disc else None,
+                      'states':copy.deepcopy(self.states),'error':self.error,
                       'buffer_full':self.buffer_full,'buffer_message':'Lokale buffer vol; wacht op de muziekserver.' if self.buffer_full else None,
                       'drive_blocked':self.drive_blocked,'speed':min(self.rip_speed or 4,self.speed_limit),
                       'blocked':sum(s.get('storage')=='blocked' for s in self.states.values()),
@@ -281,6 +295,9 @@ class Archive:
             result['timings'] = copy.deepcopy(self.metrics[-3:])
             for number,state in result['states'].items():
                 state['playable']=self.playable(number)
+                if self.disc and self.disc.get('ejected') and self.unavailable(number):
+                    state['storage']='unavailable'
+                    state['message']='Niet bewaard; plaats de cd opnieuw om dit nummer te beluisteren.'
             if self.remote:
                 result['awaiting_metadata']=sum(bool(t.get('awaiting_metadata')) for t in self.remote.get('tracks',[]))
                 result['metadata'] = {k:self.remote[k] for k in ['release','title','artist','date','disc_number','disc_total'] if k in self.remote}
@@ -354,7 +371,7 @@ class Archive:
             env=dict(os.environ,LD_LIBRARY_PATH=str(self.root/'vendor/ripping/usr/lib/arm-linux-gnueabihf'))
             with (self.stage/'last-rip.log').open('wb') as stderr:
                 with self.lock:
-                    if generation!=self.generation:return False
+                    if generation!=self.generation or not self.disc or self.disc.get('ejected'):return False
                     old=self.local.get(number)
                     if old:old.fail()
                     self.local[number]=live
@@ -429,7 +446,7 @@ class Archive:
         queued = False
         number = None
         with self.lock:
-            if not self.disc: return False
+            if not self.disc or self.disc.get('ejected'): return False
             disc = copy.deepcopy(self.disc)
             generation = self.generation
         try:
@@ -440,7 +457,7 @@ class Archive:
                 return False
             with self.lock:self.buffer_full=False
             with self.lock:
-                if generation != self.generation: return False
+                if generation != self.generation or not self.disc or self.disc.get('ejected'): return False
                 pending=[n for n in self.order if not self.states.get(n,{}).get('uploaded')
                          and n not in self.skipped.get(disc['id'], [])
                          and not self.ready(n) and (disc['id'],n) not in self.inflight

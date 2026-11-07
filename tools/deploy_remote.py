@@ -135,6 +135,12 @@ def safe_state(s, mpd):
             raise Refused('Unknown position') from None
 
 
+def compatible_session(status, files):
+    # Older releases interpret absent physical media as a lost playback session.
+    require(not status.get('disc', {}).get('ejected') or 'cd_session.py' in files,
+            'Detached album requires a session-compatible release; do not roll back during detached playback')
+
+
 def unchanged(before, after):
     require(before.get('state') == after.get('state') and before.get('songid') == after.get('songid'), 'Player changed')
     require(not after.get('error'), 'MPD error')
@@ -312,7 +318,8 @@ def transaction(root, manifest, content, system, baseline=None):
     require(root.is_dir(), 'Runtime root missing')
     system.verify_identity(root)
     old = baseline_check(root, manifest, baseline)
-    before = system.mpd('status'); safe_state(system.status(), before)
+    before = system.mpd('status'); status=system.status(); safe_state(status, before)
+    compatible_session(status, manifest['files'])
     mpd_pid = system.pid(); require(mpd_pid not in (b'', b'0', '', '0'), 'MPD process unknown')
     # Fail closed for old local stream tokens: require the separately tested
     # replacement mechanism before stopping web. No local file deletion occurs.
@@ -408,7 +415,8 @@ def rollback(root, backup_id, system):
     else:
         require(previous['release.json'] is None, 'Unexpected historical marker')
     system.verify_identity(root)
-    before = system.mpd('status'); safe_state(system.status(), before)
+    before = system.mpd('status'); status=system.status(); safe_state(status, before)
+    compatible_session(status, {name for name, entry in previous.items() if entry is not None})
     mpd_pid = system.pid()
     require(mpd_pid not in (b'', b'0', '', '0'), 'MPD process unknown')
     if before['state'] == 'pause':

@@ -9,6 +9,7 @@ class Element {
   append(...items){this.children.push(...items)}
   replaceChildren(...items){this.children=items}
   closest(){return this}
+  focus(){this.focused=true}
 }
 const elements = Object.fromEntries([...fs.readFileSync(__dirname+'/../static/index.html','utf8').matchAll(/id="([^"]+)"/g)].map(m=>[m[1],new Element()]));
 elements['cover'].setAttribute('hidden','');
@@ -47,8 +48,15 @@ render({...base,source:'plexamp',plexamp:{connected:true}});
 assert.equal(elements['source-plexamp'].attrs['aria-pressed'],'true');
 assert.equal(elements['source-spotify'].attrs['aria-pressed'],'false');
 render({...base,source:'cd'});
-assert.equal(elements['queue-section'].hidden,false);
+assert.equal(elements['track-section'].hidden,false);
+assert.equal(elements['queue-section'],undefined);
 assert.equal(elements['vinyl-panel'].hidden,true);
+render({...base,source:'cd',disc:{present:true,inserted:false,ejected:true,id:'TESTDISC1',tracks:[{number:1,title:'Song',seconds:100,ready:true}]},player:{state:'play',track:1},queue:{upcoming:[],previous:false}});
+assert.equal(elements['eject'].disabled,true);
+assert.equal(elements['play'].disabled,false);
+assert.equal(elements['track-list'].children.length,1);
+assert.equal(elements['disc-message'].hidden,false);
+assert.equal(elements['track-title'].textContent,'Song');
 console.log('Frontend: vinyl idle/listening/match/unplugged, streaming and CD transitions passed');
 render({...base,source:'dvd',dvd:{state:'detected',title:'Test film',present:true,seconds:6650,dutch_subtitles:true,audio_languages:['Engels','Frans'],width:720,height:576,aspect:'16:9'}});
 assert.equal(elements['dvd-duration'].textContent,'1 u 50 min');

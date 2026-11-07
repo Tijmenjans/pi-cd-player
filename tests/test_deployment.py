@@ -82,6 +82,20 @@ class Transactions(unittest.TestCase):
         self.assertEqual(remote.installed(self.root), self.initial['manifest'])
         self.assertNotIn('restart', self.system.calls)
         self.assertIn('HEAD', self.system.calls)
+    def test_detached_album_refuses_incompatible_apply_before_stopping(self):
+        self.system.status_value['disc']['ejected']=True
+        with self.assertRaisesRegex(remote.Refused,'session-compatible'):self.apply()
+        self.assertNotIn('stop',self.system.calls)
+
+    def test_detached_album_refuses_rollback_to_pre_session_release(self):
+        candidate=bundle(names={'app.py':b'pass\n','static/app.js':b'// next\n','cd_session.py':b'pass\n'})
+        result=self.apply(candidate,baseline={'cd_session.py':None})
+        self.system.calls.clear();self.system.status_value['disc']['ejected']=True
+        with self.assertRaisesRegex(remote.Refused,'session-compatible'):
+            remote.dispatch({'action':'rollback','backup_id':result['backup_id']},self.system,self.root)
+        self.assertNotIn('stop',self.system.calls)
+        self.assertEqual(remote.installed(self.root),candidate['manifest'])
+
     def test_idle_empty_disc(self):
         self.system = Fake('stop')
         self.system.status_value['archive'].update(stored=0, total=0, states={})

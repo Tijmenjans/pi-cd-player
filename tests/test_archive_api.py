@@ -290,7 +290,7 @@ class APITests(unittest.TestCase):
                 self.assertEqual(data['player']['track'],1)
                 self.assertTrue(data['disc']['tracks'][0]['ready'])
                 self.assertFalse(data['disc']['tracks'][1]['ready'])
-                self.assertEqual(action('queue-order',tracks=[3,2]).status_code,200)
+                self.assertEqual(action('queue-order',tracks=[3,2]).status_code,400)
                 self.assertEqual(action('track',track=3).status_code,200)
                 data=c.get('/api/status').get_json()
                 self.assertEqual(data['player']['pending_track'],3)

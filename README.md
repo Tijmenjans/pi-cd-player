@@ -8,6 +8,10 @@ De Pythonmodules, `static/` en `catalogue/` blijven in de projectroot: de bestaa
 
 Werk voortaan vanuit dit project. Gebruik `./tools/pi-ssh` voor de Pi en `./tools/vps-ssh` voor de VPS. De Pi-sleutel en herstelarchieven staan lokaal afgeschermd en buiten Git; zie [toegang en private backups](docs/access.md). Oude chatwerkruimtes zijn niet meer nodig.
 
+## Interface en cd-gedrag
+
+De interface is vernieuwd met een rustig retro-hifi design system, één zichtbare tracklist en automatisch uitwerpen na bevestigde opslag. Het album blijft daarna beschikbaar voor afspelen. Zie [ontwerp, gedrag en verificatie](docs/design-system.md). Dit beschrijft de broncode; de geïnstalleerde release op de Pi blijft leidend voor de live status.
+
 ## Ontwikkelen en testen
 
 ```sh

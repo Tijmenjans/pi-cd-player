@@ -35,3 +35,7 @@ Bij een nieuwe cd krijgt de onafhankelijke serverstatuscontrole maximaal twee se
 runtime_settings.py valideert niet-geheime installatie-instellingen met ongewijzigde defaults. optical_disc.py en de expliciete device-provider isoleren tests zonder modules in sys.modules te vervangen. Statische resources blijven gekoppeld aan de actieve code. RuntimeOwner voorkomt twee hardware-eigenaars; de onderhoudslease beschermt nieuwe HTTP-acties tijdens deployment. Externe directe MPD-bediening blijft een aparte grens.
 
 /health controleert het webproces zonder hardware-/netwerkprobe. /ready controleert de eigen workers. /api/version en release bij status bevatten alleen publieke release-identiteit; het volledige bestandsmanifest blijft buiten de API. Een ontbrekende/ongeldige marker wordt eerlijk als onbekende versie gemeld. De VPS-health kan de expliciete ARCHIVE_RELEASE uit de image-build tonen; zonder buildcommit is die onbekend.
+
+## Fysieke cd en afspeelsessie
+
+cd_session.py onderscheidt fysieke media van een behouden album. Automatisch uitwerpen neemt dezelfde optical- en onderhoudslease, laat MPD en de lokale pin ongemoeid en bewaart alleen private sessiemetadata. Scans worden op mediarevisie getoetst. Zie design-system.md voor de volledigheidsgrens, handmatig uitwerpen en tests. De zichtbare wachtrij en publieke bewerkacties zijn verwijderd; de interne ArchiveQueue blijft de afspeelcontroller.

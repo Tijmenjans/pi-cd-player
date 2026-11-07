@@ -33,8 +33,10 @@ class APITests(unittest.TestCase):
                 def post(action, **extra):
                     return client.post('/api/action', json=dict(action=action,**extra), headers={'X-CDSpeler':'1'})
                 self.assertEqual(post('shuffle',enabled=True).status_code,200)
-                self.assertEqual(post('queue-order',tracks=[4,3,2]).status_code,200)
-                self.assertEqual(post('queue-skip',track=3).status_code,200)
+                self.assertEqual(post('queue-order',tracks=[4,3,2]).status_code,400)
+                engine.action(disc,'queue-order',{'tracks':[4,3,2]})
+                self.assertEqual(post('queue-skip',track=3).status_code,400)
+                engine.action(disc,'queue-skip',{'track':3})
                 snapshot=client.get('/api/status').get_json()
                 self.assertEqual(snapshot['queue']['upcoming'],[4,2])
                 self.assertEqual(snapshot['player']['track'],1)

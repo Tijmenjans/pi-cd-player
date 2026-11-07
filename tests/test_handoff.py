@@ -67,4 +67,18 @@ class BlockedQueueTests(HandoffTests):
    self.assertEqual(state['track'],2);self.assertEqual(q.loaded,2);self.assertFalse(state['buffering'])
    store.cancel()
 
+ def test_ejected_album_keeps_local_track_then_advances_to_server(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   root=Path(tmp);store,disc=self.setup_store(root);m=MPD();q=ArchiveQueue(m,root/'queue.json',store)
+   q.action(disc,'play',{});local=q.loaded_uri;m.elapsed=3
+   store.states[1]={'ready':True,'storage':'ready'};store.states[2]={'ready':True,'storage':'ready'}
+   detached={**disc,'present':True,'inserted':False,'ejected':True};store.metadata(detached)
+   m.commands.clear();q.observe(detached)
+   self.assertEqual(q.loaded_uri,local);self.assertIn('?local=',local)
+   self.assertFalse(any(c in ('stop','clear','play 0') for c in m.commands))
+   self.assertFalse(store._produce_once())
+   m.state='stop';q.observe(detached)
+   self.assertEqual(q.loaded,2);self.assertNotIn('?local=',q.loaded_uri)
+   self.assertEqual(m.state,'play');store.cancel()
+
 if __name__=='__main__':unittest.main()

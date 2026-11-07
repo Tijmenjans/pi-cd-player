@@ -18,7 +18,8 @@ import optical_disc as libdiscid
 from runtime_settings import Settings
 from release_info import read_release
 from runtime_owner import RuntimeOwner
-from maintenance_guard import guarded_action
+from maintenance_guard import guarded_action, action_lease, MaintenanceBusy
+from cd_session import completely_stored, load_ejected
 import spotify
 import plexamp
 from dvd import DVD
@@ -40,7 +41,7 @@ DATA.mkdir(exist_ok=True)
 app = Flask(__name__, static_folder=str(CODE_ROOT/'static'))
 vinyl = Vinyl(ROOT)
 lock = threading.RLock()
-disc = {'present': False, 'tracks': [], 'loading': True}
+disc = load_ejected(DATA/'cd-session.json') or {'present': False, 'tracks': [], 'loading': True}
 source_file = DATA / 'source'
 source = read_text(source_file, 'cd')
 source = source if source in ('cd', 'spotify', 'plexamp', 'vinyl', 'dvd') else 'cd'
@@ -89,6 +90,7 @@ def values(rows):
 transition_lock = threading.RLock()
 transition = {'active': False, 'target': None, 'error': None}
 status_cache = {}
+media_revision = 0
 
 def choose_source(new):
     with transition_lock:
@@ -330,6 +332,7 @@ def accept_disc(snapshot, autoplay):
     global disc
     with transition_lock:
         with lock:disc=snapshot
+        (DATA/'cd-session.json').unlink(missing_ok=True)
         queue.attach(snapshot,reset=autoplay)
         if autoplay:
             try:
@@ -366,11 +369,92 @@ def prepare_disc(snapshot):
     return disc_media.apply_text({**snapshot,'disc_media':media},media)
 
 
+def eject_cd(automatic=False):
+    """Auto-eject confirmed albums; manual eject protects the current complete WAV."""
+    global disc, media_revision
+    with transition_lock:
+        with lock:current=copy.deepcopy(disc)
+        if current.get('eject_uncertain'):
+            if automatic:return False
+            raise RuntimeError('De drive wordt nog gecontroleerd. Probeer straks opnieuw; je muziek blijft beschikbaar.')
+        if not current.get('present') or current.get('inserted', not current.get('ejected')) is False:
+            return False
+        if automatic and current.get('auto_eject_attempted'):return False
+        complete=completely_stored(current, archive.snapshot())
+        if automatic and not complete:return False
+        if archive.reading():
+            if automatic:return False
+            raise RuntimeError('De cd wordt nog gelezen. Probeer zo opnieuw.')
+        with archive.optical.acquire() as lease:
+            if not complete and not archive.can_detach():
+                raise RuntimeError('Het huidige nummer wordt nog gelezen. Probeer straks opnieuw; zo blijft je muziek doorspelen.')
+            physical=libdiscid.read(optical_device(),features=libdiscid.FEATURE_READ)
+            if physical.id != current['id']:
+                raise RuntimeError('Er is een andere cd geplaatst. Wacht tot deze is herkend.')
+            media_revision += 1
+            with lock:disc['auto_eject_attempted']=True
+            retained={**current,'present':True,'inserted':False,'ejected':True,'loading':False}
+            retained.pop('eject_error',None)
+            retained.pop('auto_eject_attempted',None)
+            # Save before the irreversible physical action, so a restart can keep
+            # the detached album. The reader and current local pin remain alive.
+            write_json(DATA/'cd-session.json',retained,durable=True)
+            try:
+                subprocess.run(['eject', optical_device()],check=True,timeout=12,
+                               capture_output=True,pass_fds=(lease.fileno(),))
+            except Exception:
+                # The drive may have ejected despite a lost/late acknowledgement.
+                # Keep playback detached until a subsequent scan confirms media.
+                with lock:
+                    retained={**disc,'present':True,'inserted':False,'ejected':True,
+                              'eject_uncertain':True,'auto_eject_attempted':True}
+                    disc=retained
+                archive.metadata(retained)
+                write_json(DATA/'cd-session.json',retained,durable=True)
+                raise RuntimeError('Uitwerpen is nog niet bevestigd. Je muziek blijft beschikbaar; de drive wordt gecontroleerd.') from None
+            with lock:
+                retained={**disc,'present':True,'inserted':False,'ejected':True,'loading':False}
+                for name in ('eject_error','auto_eject_attempted','eject_uncertain'):retained.pop(name,None)
+                disc=retained
+            archive.metadata(retained)
+            try:write_json(DATA/'cd-session.json',retained,durable=True)
+            except OSError:app.logger.warning('Uitgeworpen album: aanvullende metadata niet bewaard')
+        return True
+
+
+def confirm_eject_scan(identity=None):
+    """Resolve an uncertain eject without treating the same disc as a new insertion."""
+    global disc
+    with transition_lock:
+        with lock:
+            if not disc.get('eject_uncertain') or identity not in (None,disc.get('id')):return False
+            disc.pop('eject_uncertain',None)
+            if identity is not None:
+                disc.update(inserted=True,ejected=False,auto_eject_attempted=True)
+            else:
+                disc.pop('eject_error',None)
+            retained=copy.deepcopy(disc)
+        archive.metadata(retained)
+        if identity is not None:(DATA/'cd-session.json').unlink(missing_ok=True)
+        else:write_json(DATA/'cd-session.json',retained,durable=True)
+        return True
+
+
+def maybe_auto_eject():
+    if source != 'cd' or transition['active']:return
+    try:
+        with action_lease(ROOT/'.deployment.lock'):eject_cd(automatic=True)
+    except (DriveBusy, MaintenanceBusy):pass
+    except Exception:
+        with lock:disc['eject_error']='De cd kon niet automatisch naar buiten. Je muziek speelt door; probeer Uitwerpen opnieuw.'
+
+
 def scan_loop():
     global disc
     last = None
     initialized = False
     while not runtime_stop.is_set():
+        observed_revision=media_revision
         try:
             # Only one process reads the drive. TOC/metadata polling must not seek
             # over a track currently being extracted.
@@ -387,39 +471,57 @@ def scan_loop():
             except DriveBusy:
                 time.sleep(1)
                 continue
-            # A drive may leave MEDIA_CHANGED set until the rip finishes.
-            # The TOC identity, not that flag, decides whether to reset playback.
-            # A real removal already clears last in the DiscError handler.
-            if cd.id != last:
-                snapshot = {'present': True, 'loading': False, 'id': cd.id,
-                            'toc': str(cd.toc),
-                            'disc_number':1,'disc_total':1,
-                            'title': 'Audio-cd', 'artist': 'Album wordt opgezocht…',
-                            'metadata_status': 'loading', 'releases': [], 'cover': None,
-                            'tracks': [{'number': i + cd.first_track, 'title': 'Track ' + str(i + cd.first_track),
-                                        'seconds': round(sectors / 75), 'sectors':int(sectors)}
-                                       for i, sectors in enumerate(cd.track_lengths)]}
-                # Stop the previous generation before reading the lead-in: an
-                # old reader must not start another track during the CD-Text query.
-                archive.cancel()
-                with lock:
-                    disc={'present':False,'loading':True,'tracks':[],
-                          'metadata_status':'reading_cdtext'}
-                snapshot=prepare_disc(snapshot)
-                if snapshot is None:
-                    last=None
+            with transition_lock:
+                if observed_revision != media_revision:continue
+                # A drive may leave MEDIA_CHANGED set until the rip finishes.
+                # The TOC identity, not that flag, decides whether to reset playback.
+                # A real removal already clears last in the DiscError handler.
+                if disc.get('eject_uncertain') and confirm_eject_scan(cd.id):
+                    last=cd.id
+                    initialized=True
                     time.sleep(1)
                     continue
-                # Establish a baseline at startup without restarting an already
-                # inserted disc or interrupting Spotify on a webapp restart.
-                accept_disc(snapshot, autoplay=initialized)
-                last = cd.id
-                threading.Thread(target=enrich, args=(dict(snapshot),), daemon=True).start()
+                if cd.id != last or disc.get('ejected'):
+                    snapshot = {'present': True, 'inserted': True, 'loading': False, 'id': cd.id,
+                                'toc': str(cd.toc),
+                                'disc_number':1,'disc_total':1,
+                                'title': 'Audio-cd', 'artist': 'Album wordt opgezocht…',
+                                'metadata_status': 'loading', 'releases': [], 'cover': None,
+                                'tracks': [{'number': i + cd.first_track, 'title': 'Track ' + str(i + cd.first_track),
+                                            'seconds': round(sectors / 75), 'sectors':int(sectors)}
+                                           for i, sectors in enumerate(cd.track_lengths)]}
+                    # Stop the previous generation before reading the lead-in: an
+                    # old reader must not start another track during the CD-Text query.
+                    replacing_detached=bool(disc.get('ejected'))
+                    archive.cancel()
+                    with lock:
+                        disc={'present':False,'loading':True,'tracks':[],
+                              'metadata_status':'reading_cdtext'}
+                    snapshot=prepare_disc(snapshot)
+                    if snapshot is None:
+                        last=None
+                        time.sleep(1)
+                        continue
+                    # Establish a baseline at startup without restarting an already
+                    # inserted disc or interrupting Spotify on a webapp restart.
+                    accept_disc(snapshot, autoplay=initialized or replacing_detached)
+                    last = cd.id
+                    threading.Thread(target=enrich, args=(dict(snapshot),), daemon=True).start()
         except OpticalDeviceError as exc:
-            with lock:disc={'present':False,'loading':False,'tracks':[],'scan_error':str(exc)}
-            last=None
+            with transition_lock:
+                if observed_revision != media_revision:continue
+                if not disc.get('ejected'):
+                    with lock:disc={'present':False,'loading':False,'tracks':[],'scan_error':str(exc)}
+                last=None
         except libdiscid.DiscError:
             with transition_lock:
+                if observed_revision != media_revision:continue
+                if disc.get('ejected'):
+                    if disc.get('eject_uncertain'):confirm_eject_scan()
+                    last=None
+                    initialized=True
+                    time.sleep(1)
+                    continue
                 archive.cancel()
                 if last is not None and source == 'cd':
                     try:mpd('stop', 'clear')
@@ -446,6 +548,7 @@ def queue_loop():
             with transition_lock:
                 if not transition['active'] and source == 'cd' and disc.get('present'):
                     queue.observe(disc)
+                    maybe_auto_eject()
         except Exception:
             app.logger.warning('Queue monitor temporarily unavailable')
         time.sleep(0.5)
@@ -685,12 +788,8 @@ def action():
                 if source == 'dvd':
                     dvd.eject()
                     return jsonify(ok=True)
-                archive.cancel()
-                if source == 'cd':
-                    queue.last = None
-                    mpd('stop', 'clear')
-                with archive.optical.acquire() as lease:
-                    subprocess.run(['eject', optical_device()], check=True, timeout=12, capture_output=True,pass_fds=(lease.fileno(),))
+                if source != 'cd':raise ValueError('Kies eerst CD of DVD.')
+                eject_cd()
                 return jsonify(ok=True)
             if cmd == 'release':
                 selected = payload.get('release')
@@ -736,7 +835,7 @@ def action():
                     raise ValueError('Onbekende Spotify-opdracht.')
                 return jsonify(ok=True)
             if cmd in ('play', 'pause', 'stop', 'track', 'next', 'previous',
-                       'shuffle', 'queue-order', 'queue-skip'):
+                       'shuffle'):
                 if not disc.get('present'):
                     raise ValueError('Plaats eerst een audio-cd.')
                 queue.action(disc, cmd, payload)
@@ -769,6 +868,7 @@ def start_runtime():
             runtime_stop.clear();archive.stopping.clear()
             if source=='vinyl' and not vinyl.connected():source='cd'
             choose_source(source)
+            if disc.get('ejected'):queue.attach(disc)
             workers=[archive.run,archive.upload_loop,archive.monitor,scan_loop,queue_loop,
                      lambda: audio.observe(runtime_stop),lambda: vinyl.observe(runtime_stop),
                      lambda: spotify.observe(runtime_stop),
