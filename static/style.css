@@ -1148,3 +1148,10 @@ body[data-source="spotify"] .now-artist {
     scroll-behavior: auto !important;
   }
 }
+
+@media (min-width: 761px) {
+  .player {
+    position: sticky;
+    top: 24px;
+  }
+}

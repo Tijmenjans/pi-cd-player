@@ -179,6 +179,24 @@ const cover =
         );
         await page.evaluate(() => scrollTo(0, 0));
       }
+      if (width > 760) {
+        state.disc.tracks = Array.from({ length: 26 }, (_, i) => ({
+          ...tracks[i % 10],
+          number: i + 1,
+        }));
+        await page.evaluate(() => readStatus());
+        await page.evaluate(() => scrollTo(0, document.body.scrollHeight));
+        const play = await page.locator("#play").boundingBox();
+        assert(
+          play.y >= 0 && play.y + play.height <= height,
+          "Desktop transport scrolls out of view",
+        );
+        await page.screenshot({
+          path: path.join(output, name + "-long-album.png"),
+          fullPage: true,
+        });
+        await page.evaluate(() => scrollTo(0, 0));
+      }
       state = fixture("cd", false, true);
       await page.evaluate(() => readStatus());
       assert(await page.locator("#eject").isDisabled());

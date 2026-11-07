@@ -6,7 +6,7 @@ De webapp gebruikt een lokaal onderhouden design system, gebaseerd op de kleur- 
 
 - Warm Sand-achtig grijs, gebroken wit, donkere inkt en een klein koper-/bronsaccent. Kleurrollen staan als CSS-variabelen bij elkaar; donker en kerst wisselen alleen hun waarden.
 - Een rustig serif-letterbeeld voor albumtitels; systeemletters voor bediening en tracknamen. Geen externe fonts, CDN, frontendbuild, nepmeters of technische dashboarddecoratie.
-- Desktop/TV heeft twee gelijke kolommen. Links hoes, albuminformatie en bediening; rechts direct de albumtracklist. Andere bronnen krijgen rechts een rustige toelichting. De cover blijft klein genoeg voor de bediening.
+- Desktop/TV heeft twee gelijke kolommen. Links hoes, albuminformatie en bediening; rechts direct de albumtracklist. Andere bronnen krijgen rechts een rustige toelichting. De cover blijft klein genoeg voor de bediening. Bij lange albums blijft het linkerpaneel op grotere schermen in beeld tijdens scrollen.
 - Mobiel heeft statusiconen bovenaan, een vaste compacte afspeelbediening en vijf bronknoppen onderaan. Extra onderruimte en safe-area voorkomen dat de laatste track achter de bediening blijft staan.
 - Eén zichtbare lijst in albumvolgorde. Geen aparte wachtrij, rondes, herschikken of verwijderen. Vorige/volgende, trackkeuze en willekeurige volgorde blijven gewone afspeelbediening. De interne ArchiveQueue blijft noodzakelijk voor buffering, pinning, decoderherstel en de volgende track; de publieke queue-order/queue-skip-acties worden geweigerd.
 - Echte knoppen, zichtbare focus, pijltjestoetsnavigatie en focusbehoud bij statusupdates. Schuifbediening heeft op mobiel een 44px-aanraakvlak. Herstelmeldingen en albumuitgavekeuze blijven bereikbaar.
