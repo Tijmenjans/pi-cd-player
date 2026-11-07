@@ -13,4 +13,4 @@ De posities zijn een voorbeeld: geef exact één echte Discogs-trackpositie per 
 
 Duren komen uitsluitend uit sectors/75; de oorspronkelijke Discogs-duur en positie blijven als herkomstinformatie bewaard. De bevestigde 50 Hollandse Toppers-entry heeft nu expliciet disc_ids voor cd 1; de bestaande track-16-correctie blijft intact. Zonder bevestigde ID blijft de conservatieve TOC-lengtematching beschikbaar. Defecte entries worden overgeslagen.
 
-Een algemene zoekfunctie op barcode/titel is niet toegevoegd: dat vereist uitgavekeuze en actuele verificatie van Discogs-API-authenticatie en limieten. Het offline hulpmiddel is daar niet van afhankelijk.
+De webapp biedt nu barcodeherstel via gecontroleerde lokale entries en conservatieve MusicBrainz-barcodekandidaten, met trackaantal-/TOC-controle. Er is geen onbeperkte Discogs-zoekfunctie of tokenafhankelijkheid toegevoegd; een specifieke Discogs-release blijft publiek te controleren. Het offline hulpmiddel blijft daarvan onafhankelijk. Zie cd-identification-recovery.md.

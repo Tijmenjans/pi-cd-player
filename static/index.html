@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#f9f9f8" />
     <title>CDspeler · Muziek voor thuis</title>
     <script src="/static/theme.js?v=7"></script>
-    <link rel="stylesheet" href="/static/style.css?v=44" />
+    <link rel="stylesheet" href="/static/style.css?v=45" />
   </head>
   <body>
     <a class="skip-link" href="#track-section">Naar de nummers</a>
@@ -229,6 +229,41 @@
                 hidden
               ></p>
             </div>
+            <details id="metadata-search" class="metadata-search" hidden>
+              <summary>Album niet herkend?</summary>
+              <p>
+                Vul de barcode op het doosje in. We controleren ook de nummers
+                en speelduur.
+              </p>
+              <form
+                onsubmit="
+                  event.preventDefault();
+                  searchAlbumBarcode();
+                "
+              >
+                <label for="barcode-input">Barcode</label>
+                <div>
+                  <input
+                    id="barcode-input"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    pattern="[0-9 -]{8,20}"
+                    maxlength="20"
+                    required
+                    placeholder="Bijvoorbeeld 5032044076128"
+                  /><button type="submit" class="text-button">
+                    Album zoeken
+                  </button>
+                </div>
+              </form>
+              <button
+                type="button"
+                class="text-button"
+                onclick="action('metadata-retry', { disc_id: state.disc.id })"
+              >
+                Zonder barcode opnieuw zoeken
+              </button>
+            </details>
           </div>
           <div class="player-info">
             <p id="notice" class="notice" role="status" aria-live="polite"></p>
@@ -472,6 +507,6 @@
         </aside>
       </div>
     </main>
-    <script src="/static/app.js?v=40"></script>
+    <script src="/static/app.js?v=41"></script>
   </body>
 </html>

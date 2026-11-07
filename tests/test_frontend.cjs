@@ -77,6 +77,15 @@ assert.equal(elements['archive-status'].hidden,false);
 render({...base,source:'cd',disc:{...base.disc,present:true},archive:{buffer_full:true,buffer_message:'Lokale buffer vol; wacht op de muziekserver.',error:'Server offline'}});
 assert.equal(elements['archive-status'].textContent,'Server offline Lokale buffer vol; wacht op de muziekserver.');
 console.log('Import recovery controls and blocked-drive notice passed');
+
+render({...base,source:'cd',capabilities:{metadata_barcode:true},disc:{id:'TESTDISC1',present:true,metadata_status:'unknown',tracks:[]}});
+assert.equal(elements['metadata-search'].hidden,false);
+render({...base,source:'cd',disc:{id:'TESTDISC1',present:true,metadata_status:'unknown',tracks:[]}});
+assert.equal(elements['metadata-search'].hidden,true);
+render({...base,source:'cd',disc:{present:true,tracks:[]},archive:{blocked:1,drive_blocked:true,reader_active:false}});
+assert.equal(elements['archive-retry'].hidden,false);
+console.log('Barcode recovery capability and idle-drive retry controls passed');
+
 (async()=>{
  render({...base,source:'plexamp',plexamp:{connected:true}});
  let finish;

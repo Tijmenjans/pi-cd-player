@@ -19,7 +19,7 @@ from pathlib import Path
 from state_store import write_json
 from runtime_settings import Settings
 from live_audio import GrowingWav, RATE
-from optical_reader import OpticalLease, ProgressWatchdog, ReadFailure, DriveBusy, stop_process
+from optical_reader import OpticalLease, ProgressWatchdog, ReadFailure, ReaderStalled, DriveBusy, stop_process
 
 
 class Cloud:
@@ -115,6 +115,9 @@ class Archive:
         self.failures=self.recovery.get('failures',{})
         if not isinstance(self.failures,dict):self.failures={}
         self.failures={key:value for key,value in self.failures.items() if isinstance(key,str) and type(value) is int and 0<=value<=3}
+        self.drive_halted=self.recovery.get('drive_halted') is True
+        self.drive_stalls=set(x for x in self.recovery.get('drive_stalls',[]) if isinstance(x,str)) if isinstance(self.recovery.get('drive_stalls',[]),list) else set()
+        self.drive_blocked=self.drive_halted
         self.speed_limit=self.recovery.get('speed_limit',4)
         if type(self.speed_limit) is not int or not 1<=self.speed_limit<=48:self.speed_limit=4
         self.optical=OpticalLease(self.stage/'optical.lock',self.root/'vendor/ripping/usr/bin/cdparanoia')
@@ -170,15 +173,20 @@ class Archive:
         with self.lock:
             if self.process is proc and stopped:self.process=None
             if not stopped:
-                self.drive_blocked=True
+                self._halt_drive()
                 self.reader_error='De USB-cd-drive reageert niet op stoppen. Sluit de drive opnieuw aan; opgeslagen nummers blijven bewaard.'
 
     @staticmethod
     def _failure_key(identity,number):return identity+':'+str(number)
 
     def _save_recovery(self):
-        self.recovery.update(failures=self.failures,speed_limit=self.speed_limit)
+        self.recovery.update(failures=self.failures,speed_limit=self.speed_limit,drive_halted=self.drive_halted,drive_stalls=sorted(self.drive_stalls)[-30:])
         write_json(self.recovery_path, self.recovery, durable=True)
+
+    def _halt_drive(self):
+        self.drive_halted=True;self.drive_blocked=True
+        try:self._save_recovery()
+        except OSError:logging.warning('Driveblokkade kon niet worden bewaard')
 
     def _read_failed(self,identity,number,message):
         key=self._failure_key(identity,number)
@@ -195,12 +203,20 @@ class Archive:
         with self.lock:
             if self.reading():raise RuntimeError('Wacht tot de huidige leesopdracht klaar is of sluit een vastgelopen USB-drive opnieuw aan.')
             if not self.disc:raise RuntimeError('Plaats eerst een cd.')
-            for number,state in self.states.items():
+            optical_device()  # Sysfs/access check only; never a media ioctl.
+            failures=dict(self.failures);retry_after=dict(self.retry_after);states=copy.deepcopy(self.states)
+            for number,state in states.items():
                 if state.get('storage') in ('blocked','error') and not state.get('uploaded'):
-                    self.failures.pop(self._failure_key(self.disc['id'],number),None)
-                    self.retry_after.pop((self.disc['id'],number),None)
-                    self.states[number]={'storage':'pending','ready':False}
-            self.reader_error=None;self.drive_blocked=False;self._save_recovery();self.wake.set()
+                    failures.pop(self._failure_key(self.disc['id'],number),None)
+                    retry_after.pop((self.disc['id'],number),None)
+                    states[number]={'storage':'pending','ready':False}
+            recovery={**self.recovery,'failures':failures,'speed_limit':self.speed_limit,
+                      'drive_halted':False,'drive_stalls':[]}
+            # A failed disk write must never re-enable the optical reader in memory.
+            write_json(self.recovery_path,recovery,durable=True)
+            self.recovery=recovery;self.failures=failures;self.retry_after=retry_after;self.states=states
+            self.drive_halted=False;self.drive_stalls.clear();self.reader_error=None;self.drive_blocked=False
+            self.wake.set()
 
     def can_detach(self):
         """A manual eject may keep a complete local pin, never truncate a growing one."""
@@ -287,7 +303,7 @@ class Archive:
             result = {'disc_id':self.disc.get('id') if self.disc else None,
                       'states':copy.deepcopy(self.states),'error':self.error,
                       'buffer_full':self.buffer_full,'buffer_message':'Lokale buffer vol; wacht op de muziekserver.' if self.buffer_full else None,
-                      'drive_blocked':self.drive_blocked,'speed':min(self.rip_speed or 4,self.speed_limit),
+                      'drive_blocked':self.drive_blocked,'reader_active':bool(self.process is not None and self.process.poll() is None),'speed':min(self.rip_speed or 4,self.speed_limit),
                       'blocked':sum(s.get('storage')=='blocked' for s in self.states.values()),
                       'stored':sum(bool(s.get('ready')) for s in self.states.values()),
                       'total':len(self.states)}
@@ -363,7 +379,8 @@ class Archive:
         binary=self.root/'vendor/ripping/usr/bin/cdparanoia'
         if not binary.exists():raise RuntimeError('De cd-ripper is nog niet geïnstalleerd')
         lease=self.optical.acquire()
-        with self.lock:self.drive_blocked=False
+        with self.lock:
+            if not self.drive_halted:self.drive_blocked=False
         partial=target.with_suffix('.partial.wav');partial.unlink(missing_ok=True)
         live=GrowingWav(partial,sectors*588);proc=None;finished=False;buffered=False
         started=time.monotonic()
@@ -371,7 +388,7 @@ class Archive:
             env=dict(os.environ,LD_LIBRARY_PATH=str(self.root/'vendor/ripping/usr/lib/arm-linux-gnueabihf'))
             with (self.stage/'last-rip.log').open('wb') as stderr:
                 with self.lock:
-                    if generation!=self.generation or not self.disc or self.disc.get('ejected'):return False
+                    if generation!=self.generation or not self.disc or self.disc.get('ejected') or self.drive_halted:return False
                     old=self.local.get(number)
                     if old:old.fail()
                     self.local[number]=live
@@ -409,7 +426,7 @@ class Archive:
             with self.lock:
                 if self.process is proc and stopped:self.process=None
                 if not stopped:
-                    self.drive_blocked=True
+                    self._halt_drive()
                     self.reader_error='De USB-cd-drive reageert niet op stoppen. Sluit de drive opnieuw aan; opgeslagen nummers blijven bewaard.'
                 if not finished:
                     live.fail('Het uitlezen van dit nummer is onderbroken')
@@ -445,6 +462,7 @@ class Archive:
         reserved = False
         queued = False
         number = None
+        did_read = False
         with self.lock:
             if not self.disc or self.disc.get('ejected'): return False
             disc = copy.deepcopy(self.disc)
@@ -461,7 +479,8 @@ class Archive:
                 pending=[n for n in self.order if not self.states.get(n,{}).get('uploaded')
                          and n not in self.skipped.get(disc['id'], [])
                          and not self.ready(n) and (disc['id'],n) not in self.inflight
-                         and self.failures.get(self._failure_key(disc['id'],n),0)<3
+                         and (not self.drive_halted or (self.stage/(disc['id']+'-'+str(n)+'.wav')).exists())
+                         and (self.failures.get(self._failure_key(disc['id'],n),0)<3 or (self.stage/(disc['id']+'-'+str(n)+'.wav')).exists())
                          and self.retry_after.get((disc['id'],n),0)<time.monotonic()]
                 if not pending: return False
                 number=pending[0]
@@ -474,8 +493,10 @@ class Archive:
                         if wav.getnframes()!=next(t['sectors']*588 for t in disc['tracks'] if t['number']==number) or wav.getnchannels()!=2 or wav.getsampwidth()!=2 or wav.getframerate()!=44100:raise ValueError('Onvolledig bestand')
                 except (OSError,ValueError,EOFError,wave.Error):target.unlink(missing_ok=True)
             if not target.exists():
+                if self.drive_halted:return False
                 started=time.monotonic()
                 if not self._rip(disc,number,generation,target): return False
+                did_read=True
                 self._metric(disc['id'],number,'rip',time.monotonic()-started,target.stat().st_size)
             elif number not in self.local:
                 frames=next(t['sectors']*588 for t in disc['tracks'] if t['number']==number)
@@ -484,6 +505,11 @@ class Archive:
                     if generation != self.generation:
                         live.close();return False
                     self.local[number]=live
+            with self.lock:
+                if did_read and self.drive_stalls and not self.drive_halted:
+                    self.drive_stalls.clear()
+                    try:self._save_recovery()
+                    except OSError:logging.warning('Herstelvoortgang kon niet worden bewaard')
             # Hash once in the reader worker, independently of the network transfer.
             with target.open('rb') as f:
                 digest=hashlib.file_digest(f,'sha256').hexdigest()
@@ -503,7 +529,11 @@ class Archive:
                         self.reader_error=str(exc)
                         self.retry_after[(disc['id'],number)]=time.monotonic()+1
                     elif number is not None:
-                        if isinstance(exc,ReadFailure):self._read_failed(disc['id'],number,str(exc))
+                        if isinstance(exc,ReadFailure):
+                            if isinstance(exc,ReaderStalled):
+                                self.drive_stalls.add(self._failure_key(disc['id'],number))
+                                if len(self.drive_stalls)>=2:self._halt_drive()
+                            self._read_failed(disc['id'],number,str(exc))
                         else:
                             self.reader_error=(str(exc) if isinstance(exc,(OpticalDeviceError,RuntimeError)) else 'Lokale opslag of configuratie niet beschikbaar; volledige bestanden blijven bewaard.')
                             self.states[number]={'storage':'error','ready':False,'message':self.reader_error}

@@ -232,11 +232,16 @@ def publish_metadata(snapshot,updates,job=None):
 def enrich_once(snapshot,job=None):
     cache = DATA / (snapshot['id'] + '.json')
     try:
+        try:
+            barcode_record=json.loads((DATA/(snapshot['id']+'-barcode.json')).read_text())
+            barcode=music_metadata.normalise_barcode(barcode_record['barcode']) if barcode_record.get('toc')==snapshot.get('toc') else None
+        except (OSError,ValueError,KeyError,TypeError):barcode=None
         try:metadata=json.loads(cache.read_text()) if cache.exists() else {}
         except (OSError,ValueError):metadata={}
         if not isinstance(metadata,dict):metadata={}
+        if barcode and metadata.get('lookup_barcode')!=barcode:metadata={}
         if not metadata.get('releases'):
-            alternate=catalogue.lookup(snapshot,CODE_ROOT/'catalogue')
+            alternate=catalogue.lookup(snapshot,CODE_ROOT/'catalogue',barcode=barcode)
             if alternate:metadata=alternate
         # Existing good metadata/explicit choices survive network outages. An old
         # negative result must not suppress the new broader lookup.
@@ -244,15 +249,20 @@ def enrich_once(snapshot,job=None):
                         and metadata.get('toc')==snapshot.get('toc')
                         and time.time()-metadata.get('looked_up_at',0)<86400)
         if not metadata.get('releases') and not fresh_negative:
-            metadata=music_metadata.lookup(snapshot,get_musicbrainz_json)
+            metadata=music_metadata.lookup_barcode(snapshot,barcode,get_musicbrainz_json) if barcode else music_metadata.lookup(snapshot,get_musicbrainz_json)
             metadata.update(toc=snapshot.get('toc'),looked_up_at=time.time())
         # Atomic writes keep a restart or failed write from corrupting the cache.
         with lock:
             if job is not None and metadata_jobs.get(snapshot['id']) is not job:return False
+            if barcode and not metadata.get('releases'):
+                if disc.get('id')==snapshot['id']:
+                    disc.update(metadata_status='barcode_unknown',metadata_error='Geen passende uitgave bij deze barcode. Eerdere gegevens blijven behouden.')
+                return False  # Keep the previous coherent cache/identification, not half of it.
             try:chosen=json.loads(cache.read_text()).get('selected')
             except (OSError,ValueError,AttributeError):chosen=None
             if chosen and any(r['id']==chosen for r in metadata.get('releases',[])):
                 metadata['selected']=chosen
+            if barcode:metadata['lookup_barcode']=barcode
             write_json(cache,metadata)
         releases = metadata.get('releases', [])
         preferred = metadata.get('selected')
@@ -707,12 +717,14 @@ def status():
     finally:transition_lock.release()
 
 def _status_snapshot(source,streaming_source,disc):
-    result = {'source': source, 'streaming_source': streaming_source, 'disc': copy.deepcopy(disc), 'player': {}, 'device': 'CDspeler', 'output': audio.snapshot(), 'transition':dict(transition), 'release':read_release(ROOT)}
+    result = {'source': source, 'streaming_source': streaming_source, 'disc': copy.deepcopy(disc), 'player': {}, 'device': 'CDspeler', 'output': audio.snapshot(), 'transition':dict(transition), 'release':read_release(ROOT),'capabilities':{'metadata_barcode':True}}
     saved=archive.snapshot()
     result['archive']=saved
     if source == 'cd' and saved.get('drive_blocked'):result['error']=saved.get('error')
     if saved.get('metadata') and saved['metadata'].get('release'):
         result['disc'].update(saved['metadata'])
+        if saved.get('disc_id')==disc.get('id') and disc.get('metadata_status') in ('unknown','loading','retrying','error'):
+            result['disc']['metadata_status']='found'
     for track in result['disc'].get('tracks',[]):
         remote=dict(saved.get('track_metadata',{}).get(track['number'],{}))
         # The server may still describe the pre-lookup snapshot until a
@@ -779,6 +791,21 @@ def action():
             if cmd == 'dvd-stop':
                 if source != 'dvd':raise ValueError('Kies eerst DVD.')
                 dvd.stop_stream()
+                return jsonify(ok=True)
+            if cmd in ('metadata-barcode','metadata-retry'):
+                if source != 'cd' or not disc.get('present'):raise ValueError('Plaats eerst een audio-cd.')
+                if payload.get('disc_id')!=disc.get('id'):raise ValueError('Er is een andere cd geplaatst. Ververs de pagina.')
+                if cmd=='metadata-barcode':
+                    barcode=music_metadata.normalise_barcode(payload.get('barcode',''))
+                    write_json(DATA/(disc['id']+'-barcode.json'),{'barcode':barcode,'toc':disc.get('toc')},durable=True)
+                cache=DATA/(disc['id']+'.json')
+                try:cached=json.loads(cache.read_text())
+                except (OSError,ValueError):cached={}
+                if not cached.get('releases'):cache.unlink(missing_ok=True)
+                with lock:
+                    disc.update(metadata_status='loading',metadata_error=None)
+                    metadata_jobs.pop(disc['id'],None)
+                threading.Thread(target=enrich,args=(dict(disc),),daemon=True).start()
                 return jsonify(ok=True)
             if cmd == 'archive-retry':
                 if source != 'cd':raise ValueError('Kies eerst CD.')
@@ -868,7 +895,9 @@ def start_runtime():
             runtime_stop.clear();archive.stopping.clear()
             if source=='vinyl' and not vinyl.connected():source='cd'
             choose_source(source)
-            if disc.get('ejected'):queue.attach(disc)
+            if disc.get('ejected'):
+                queue.attach(disc)
+                threading.Thread(target=enrich,args=(dict(disc),),daemon=True).start()
             workers=[archive.run,archive.upload_loop,archive.monitor,scan_loop,queue_loop,
                      lambda: audio.observe(runtime_stop),lambda: vinyl.observe(runtime_stop),
                      lambda: spotify.observe(runtime_stop),

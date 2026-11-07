@@ -1,0 +1,177 @@
+{
+  "id": "discogs-1685005",
+  "title": "White Christmas",
+  "artist": "Bing Crosby",
+  "date": "2002",
+  "disc_total": 1,
+  "source": "https://www.discogs.com/release/1685005",
+  "notes": "Barcode supplied by owner; all 14 source durations verified against measured TOC. Keep measured sectors/75 authoritative.",
+  "provenance": [
+    {
+      "track": 1,
+      "discogs_position": "1",
+      "discogs_duration": "2:37",
+      "measured_seconds": 157.29333333333332
+    },
+    {
+      "track": 2,
+      "discogs_position": "2",
+      "discogs_duration": "3:11",
+      "measured_seconds": 190.77333333333334
+    },
+    {
+      "track": 3,
+      "discogs_position": "3",
+      "discogs_duration": "3:03",
+      "measured_seconds": 182.85333333333332
+    },
+    {
+      "track": 4,
+      "discogs_position": "4",
+      "discogs_duration": "2:18",
+      "measured_seconds": 137.85333333333332
+    },
+    {
+      "track": 5,
+      "discogs_position": "5",
+      "discogs_duration": "2:53",
+      "measured_seconds": 172.73333333333332
+    },
+    {
+      "track": 6,
+      "discogs_position": "6",
+      "discogs_duration": "2:55",
+      "measured_seconds": 175.05333333333334
+    },
+    {
+      "track": 7,
+      "discogs_position": "7",
+      "discogs_duration": "2:35",
+      "measured_seconds": 155.14666666666668
+    },
+    {
+      "track": 8,
+      "discogs_position": "8",
+      "discogs_duration": "2:41",
+      "measured_seconds": 161.38666666666666
+    },
+    {
+      "track": 9,
+      "discogs_position": "9",
+      "discogs_duration": "3:02",
+      "measured_seconds": 182.34666666666666
+    },
+    {
+      "track": 10,
+      "discogs_position": "10",
+      "discogs_duration": "2:49",
+      "measured_seconds": 168.6
+    },
+    {
+      "track": 11,
+      "discogs_position": "11",
+      "discogs_duration": "2:44",
+      "measured_seconds": 163.73333333333332
+    },
+    {
+      "track": 12,
+      "discogs_position": "12",
+      "discogs_duration": "2:53",
+      "measured_seconds": 173.49333333333334
+    },
+    {
+      "track": 13,
+      "discogs_position": "13",
+      "discogs_duration": "3:03",
+      "measured_seconds": 183.45333333333335
+    },
+    {
+      "track": 14,
+      "discogs_position": "14",
+      "discogs_duration": "3:00",
+      "measured_seconds": 179.96
+    }
+  ],
+  "media": [
+    {
+      "number": 1,
+      "tracks": [
+        {
+          "title": "Silent Night, Holy Night",
+          "artist": "Bing Crosby",
+          "seconds": 157.29333333333332
+        },
+        {
+          "title": "Adeste Fideles",
+          "artist": "Bing Crosby",
+          "seconds": 190.77333333333334
+        },
+        {
+          "title": "White Christmas",
+          "artist": "Bing Crosby",
+          "seconds": 182.85333333333332
+        },
+        {
+          "title": "God Rest Ye Merry, Gentlemen",
+          "artist": "Bing Crosby",
+          "seconds": 137.85333333333332
+        },
+        {
+          "title": "Faith Of Your Fathers",
+          "artist": "Bing Crosby",
+          "seconds": 172.73333333333332
+        },
+        {
+          "title": "I'll Be Home For Christmas",
+          "artist": "Bing Crosby",
+          "seconds": 175.05333333333334
+        },
+        {
+          "title": "Jingle Bells",
+          "artist": "Bing Crosby",
+          "seconds": 155.14666666666668
+        },
+        {
+          "title": "Santa Claus Is Coming To Town",
+          "artist": "Bing Crosby",
+          "seconds": 161.38666666666666
+        },
+        {
+          "title": "Silver Bells",
+          "artist": "Bing Crosby",
+          "seconds": 182.34666666666666
+        },
+        {
+          "title": "It's Beginning To Look Like Christmas",
+          "artist": "Bing Crosby",
+          "seconds": 168.6
+        },
+        {
+          "title": "Christmas In Killarney",
+          "artist": "Bing Crosby",
+          "seconds": 163.73333333333332
+        },
+        {
+          "title": "Mele Kalikimaka (Merry Christmas)",
+          "artist": "Bing Crosby",
+          "seconds": 173.49333333333334
+        },
+        {
+          "title": "Too-Ra-Loo-Ral (That's An Irish Lullaby)",
+          "artist": "Bing Crosby",
+          "seconds": 183.45333333333335
+        },
+        {
+          "title": "Galway Bay",
+          "artist": "Bing Crosby",
+          "seconds": 179.96
+        }
+      ],
+      "disc_ids": [
+        "olA1yZXd23ieopV4fnqmhg7y.Uk-"
+      ]
+    }
+  ],
+  "barcode": "5032044076128",
+  "country": "Germany"
+}

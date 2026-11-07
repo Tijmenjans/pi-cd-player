@@ -12,6 +12,10 @@ Werk voortaan vanuit dit project. Gebruik `./tools/pi-ssh` voor de Pi en `./tool
 
 De interface is vernieuwd met een rustig retro-hifi design system, één zichtbare tracklist en automatisch uitwerpen na bevestigde opslag. Het album blijft daarna beschikbaar voor afspelen. Zie [ontwerp, gedrag en verificatie](docs/design-system.md). Dit beschrijft de broncode; de geïnstalleerde release op de Pi blijft leidend voor de live status.
 
+## Cd-herkenning en herstel
+
+De broncode biedt bij onbekende albums barcodezoeken met TOC-controle en een blijvende driveblokkade bij herhaalde USB-watchdogproblemen. De gecontroleerde Bing Crosby-entry is toegevoegd. Zie [herkenning en USB-herstel](docs/cd-identification-recovery.md) voor live metadatareparatie, tests en de uitrolgrens tijdens imports.
+
 ## Ontwikkelen en testen
 
 ```sh

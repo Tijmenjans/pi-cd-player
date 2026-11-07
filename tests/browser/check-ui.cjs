@@ -111,6 +111,7 @@ const cover =
       });
       const page = await context.newPage();
       let movieRequests = 0;
+      const actions = [];
       let state = fixture("cd");
       page.on("pageerror", (error) => failures.push(error.message));
       await page.route("**/*", async (route) => {
@@ -121,6 +122,7 @@ const cover =
           return route.fulfill({ json: state });
         if (url.pathname === "/api/action") {
           const payload = request.postDataJSON();
+          actions.push(payload);
           if (payload.action === "source") state = fixture(payload.source);
           return route.fulfill({ json: { ok: true } });
         }
@@ -228,6 +230,26 @@ const cover =
           fullPage: true,
         });
       }
+      state = fixture("cd");
+      state.capabilities = { metadata_barcode: true };
+      state.disc.metadata_status = "unknown";
+      state.disc.release = null;
+      await page.evaluate(() => readStatus());
+      await page.locator("#metadata-search summary").click();
+      await page.locator("#barcode-input").fill("5032044076128");
+      await page.waitForFunction(() => !busy);
+      await page
+        .getByRole("button", { name: "Album zoeken", exact: true })
+        .click();
+      await page.waitForFunction(() => !busy);
+      assert(
+        actions.some(
+          (p) =>
+            p.action === "metadata-barcode" &&
+            p.disc_id === "TESTDISC1" &&
+            p.barcode === "5032044076128",
+        ),
+      );
       state = fixture("cd", true);
       await page.evaluate(() => readStatus());
       assert(await page.locator(".empty").isVisible());

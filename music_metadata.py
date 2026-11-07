@@ -65,3 +65,32 @@ def lookup(snapshot,fetch):
     exact=release_metadata(query(params),snapshot)
     if exact['releases'] or not snapshot.get('toc'):return exact
     return release_metadata(query({**params,'toc':snapshot['toc']}),snapshot,allow_toc=True)
+
+
+def normalise_barcode(value):
+    value=str(value).replace(' ','').replace('-','')
+    if not value.isascii() or not value.isdigit() or len(value) not in (8,12,13) or not value.strip('0'):
+        raise ValueError('Gebruik de 8, 12 of 13 cijfers van de barcode.')
+    check=sum(int(n)*(3 if index%2==0 else 1) for index,n in enumerate(reversed(value[:-1])))
+    if (-check)%10!=int(value[-1]):raise ValueError('De barcode klopt niet. Controleer de cijfers op het doosje.')
+    return value
+
+
+def lookup_barcode(snapshot,barcode,fetch):
+    """Barcode narrows candidates; measured track count and lengths still decide."""
+    barcode=normalise_barcode(barcode)
+    url='https://musicbrainz.org/ws/2/release/?'+urllib.parse.urlencode({'query':'barcode:'+barcode,'fmt':'json','limit':5})
+    search=fetch(url);releases=[]
+    import re
+    for candidate in search.get('releases',[])[:5]:
+        identity=candidate.get('id','')
+        if not re.fullmatch(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',identity):continue
+        try:full=fetch('https://musicbrainz.org/ws/2/release/'+identity+'?inc=recordings+artist-credits+discids&fmt=json')
+        except urllib.error.HTTPError as exc:
+            if exc.code==404:continue
+            raise
+        if str(full.get('barcode','')).replace(' ','').lstrip('0')!=barcode.lstrip('0'):continue
+        releases.append(full)
+    result=release_metadata({'releases':releases},snapshot,allow_toc=True)
+    result['lookup_barcode']=barcode
+    return result

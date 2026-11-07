@@ -25,13 +25,14 @@ def validated(data):
     return data
 
 
-def lookup(snapshot,directory):
+def lookup(snapshot,directory,barcode=None):
     tracks=snapshot.get('tracks',[])
     if len(tracks)<4:return None
     exact=[];fallback=[]
     for path in sorted(Path(directory).glob('*.json')):
         try:data=validated(json.loads(path.read_text()))
         except (OSError,ValueError,TypeError):continue
+        if barcode and ''.join(c for c in str(data.get('barcode','')) if c.isdigit()).lstrip('0')!=barcode.lstrip('0'):continue
         for medium in data['media']:
             candidates=medium['tracks'];ids=medium.get('disc_ids',[])
             if ids and snapshot.get('id') not in ids:continue

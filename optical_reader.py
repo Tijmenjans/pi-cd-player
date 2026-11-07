@@ -4,6 +4,7 @@ from pathlib import Path
 
 class ReadFailure(RuntimeError):pass
 class DriveBusy(ReadFailure):pass
+class ReaderStalled(ReadFailure):pass
 
 class ProgressWatchdog:
     def __init__(self,seconds,speed,clock=time.monotonic,stall=45):
@@ -12,8 +13,8 @@ class ProgressWatchdog:
     def check(self,size):
         now=self.clock()
         if size>self.bytes:self.bytes=size;self.changed=now
-        if now-self.changed>=self.stall:raise ReadFailure('De cd-drive levert geen nieuwe data; herstel bij lagere snelheid')
-        if now>=self.deadline:raise ReadFailure('De cd-drive leest te langzaam; herstel bij lagere snelheid')
+        if now-self.changed>=self.stall:raise ReaderStalled('De cd-drive levert geen nieuwe data; herstel bij lagere snelheid')
+        if now>=self.deadline:raise ReaderStalled('De cd-drive leest te langzaam; herstel bij lagere snelheid')
         return max(0,int(now-self.changed))
 
 def stop_process(proc):

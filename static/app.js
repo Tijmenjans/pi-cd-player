@@ -207,6 +207,7 @@ function render() {
   if (
     state.source === "cd" &&
     state.disc?.release &&
+    state.disc.metadata_status !== "barcode_unknown" &&
     state.archive?.metadata?.release === state.disc.release
   ) {
     state.disc.metadata_status = "found";
@@ -236,7 +237,10 @@ function render() {
   show("archive-status", isCD && (!!d.present || !!saved.error));
   show(
     "archive-retry",
-    isCD && !!d.present && !!saved.blocked && !saved.drive_blocked,
+    isCD &&
+      !!d.present &&
+      (!!saved.blocked || !!saved.drive_blocked) &&
+      (!saved.drive_blocked || saved.reader_active === false),
   );
   const activeRip = d.tracks.find((t) =>
     ["ripping", "uploading", "retrying_upload"].includes(t.storage),
@@ -265,6 +269,15 @@ function render() {
     $("source-" + source).classList.toggle("selected", selected);
     $("source-" + source).setAttribute("aria-pressed", String(selected));
   }
+  show(
+    "metadata-search",
+    isCD &&
+      !!d.present &&
+      !!state.capabilities?.metadata_barcode &&
+      ["unknown", "error", "choose", "barcode_unknown"].includes(
+        d.metadata_status,
+      ),
+  );
   show("track-section", isCD);
   show("source-guide", !isCD);
   const sourceNames = {
@@ -359,15 +372,17 @@ function render() {
       "metadata-status",
       !d.present
         ? ""
-        : d.metadata_status === "retrying"
-          ? "Albuminformatie tijdelijk niet bereikbaar · opnieuw proberen…"
-          : d.metadata_status === "unknown"
-            ? "Geen albuminformatie gevonden"
-            : d.metadata_status === "choose"
-              ? "Meerdere albums passen · kies de juiste albumuitgave onder Nummers"
-              : d.metadata_status === "error"
-                ? "Albuminformatie kon niet worden verwerkt"
-                : "",
+        : d.metadata_status === "barcode_unknown"
+          ? "Geen passende uitgave bij deze barcode. Eerdere gegevens blijven behouden."
+          : d.metadata_status === "retrying"
+            ? "Albuminformatie tijdelijk niet bereikbaar · opnieuw proberen…"
+            : d.metadata_status === "unknown"
+              ? "Geen albuminformatie gevonden"
+              : d.metadata_status === "choose"
+                ? "Meerdere albums passen · kies de juiste albumuitgave onder Nummers"
+                : d.metadata_status === "error"
+                  ? "Albuminformatie kon niet worden verwerkt"
+                  : "",
     );
     show("metadata-status", !!$("metadata-status").textContent);
     const totalSeconds = d.tracks.reduce(
@@ -777,4 +792,12 @@ function renderDVD() {
   );
   $("dvd-eject").disabled = !d.present || d.state === "ejecting";
   show("dvd-stop", !!d.streaming);
+}
+
+function searchAlbumBarcode() {
+  if (!state?.disc?.present) return;
+  return action("metadata-barcode", {
+    barcode: $("barcode-input").value,
+    disc_id: state.disc.id,
+  });
 }
