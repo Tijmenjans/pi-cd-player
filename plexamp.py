@@ -113,9 +113,10 @@ def load_metadata(key):
             pass
 
 
-def observe_metadata():
+def observe_metadata(stop=None):
+    stop=stop or threading.Event()
     retry_at = {}
-    while True:
+    while not stop.is_set():
         _wake.wait(1)
         _wake.clear()
         with _lock:
@@ -153,9 +154,10 @@ def request(path, **params):
         return ET.fromstring(response.read())
 
 
-def observe(enabled):
+def observe(enabled,stop=None):
+    stop=stop or threading.Event()
     global _state, _wanted
-    while True:
+    while not stop.is_set():
         try:
             if enabled():
                 root = request('/player/timeline/poll', wait=0)
@@ -173,7 +175,7 @@ def observe(enabled):
         except Exception:
             with _lock:
                 _state = {'connected': False, 'state': 'stopped'}
-        time.sleep(1)
+        stop.wait(1)
 
 
 def snapshot():

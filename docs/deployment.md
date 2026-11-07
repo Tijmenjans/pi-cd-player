@@ -27,3 +27,23 @@ Controleer zonder disc `vendor/dvd/usr/bin/ffmpeg -demuxers` op dvdvideo, `ffpro
 ## VPS
 
 Broncode in archive-server/ hoort in /opt/cd-archive. compose.yaml beschrijft de bestaande Docker-netwerken, mounts en reverse-proxy. Pas infrastructuurwaarden bewust aan voor een andere omgeving. Houd .env met ARCHIVE_TOKEN privé. `/data/media/cd-archive`, `/data/media/music` en Plex Preferences.xml blijven bestaande data/configuratie. artwork.py draait via cd-archive-artwork.service buiten de container; server.py en silence.py moeten daarvoor ook beschikbaar blijven. `/opt/plex/plex_api.py` is een bestaande privéhelper: niet overgenomen omdat deze mogelijk toegangsmateriaal bevat en buiten deze servicecode staat. Docker rebuilds, restarts en Plex-wijzigingen zijn niet uitgevoerd.
+
+## Uitrol van de beoordeelde verbeteringen
+
+Deze wijzigingen zijn alleen in Git voorbereid. Neem bij toekomstige uitrol ook de nieuwe runtime-module state_store.py mee. Installeer de Pi-modules, DVD-module en frontend uit dezelfde commit; start de app via app.py, zodat start_runtime() werkelijk wordt aangeroepen. Import door een willekeurige WSGI-starter start bewust geen workers. Houd één proces als runtime-eigenaar. Rol pas uit wanneer muziek, DVD en imports klaar zijn; laat alle bestaande data en vendor-assets staan.
+
+Backup vóór VPS-uitrol ook de SQLite-database met een consistente SQLite-backup en de bestaande code. initialize() voegt de tabel plex_refresh toe zonder bestaande tracks te herschrijven. Bij rollback kan de vorige versie die extra tabel negeren. Behoud raw-, unmatched- en music-bestanden altijd. Startup controleert maximaal 1000 raw-mappen en een tijdsbudget van 10 seconden tussen bestanden; een reeds begonnen bestandscontrole wordt afgemaakt. Voor een groter archief kan tijdens gepland onderhoud expliciet `python3 -c 'import server; server.initialize(); print(server.reconcile_raw(limit=100000, seconds=3600))'` vanuit /opt/cd-archive worden uitgevoerd. Dit leest en registreert volledige WAVs; het verwijdert niets. Dit commando is tijdens de ontwikkeling niet op de VPS uitgevoerd.
+
+### Derdepartijmanifest
+
+Maak tijdens gepland onderhoud op de Pi een manifest naast de privébackup:
+
+```sh
+python3 tools/dependency_manifest.py --root /home/tijmen/cdspeler --caldera /home/tijmen/caldera-music --output /tmp/cdspeler-dependencies.json
+```
+
+Het hulpmiddel inventariseert geselecteerde vendor-executables/libraries en distributieversies. Het leest geen accountconfiguratie, start geen driveprobe en overschrijft geen bestaand manifest. Voeg na review herkomst-URL's, pakketversies en buildopties aan de privébackup toe. De exacte huidige hashes zijn niet op de Pi verzameld: dit hulpmiddel levert de voorbereiding, geen claim van een al bewezen schone herinstallatie.
+
+### Netwerkgrens
+
+De Pi-webapp is bedoeld voor het vertrouwde thuis-LAN. X-CDSpeler en Origin-controle zijn bescherming tegen ongewenste browseracties, geen gebruikerslogin. Publiceer poort 8080 niet rechtstreeks op internet. Voor externe bediening is een afzonderlijke beveiligde toegangspoort nodig; de vaste VLC-stream blijft lokaal beschikbaar. De VPS-archiefroute blijft achter bestaande HTTPS/authenticatie en proxy. Geen firewall-, router- of proxyinstellingen zijn tijdens deze wijziging aangepast.

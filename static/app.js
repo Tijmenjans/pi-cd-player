@@ -175,7 +175,7 @@ function render() {
   show('archive-retry', isCD && !!d.present && !!saved.blocked && !saved.drive_blocked);
   const activeRip = d.tracks.find(t => ['ripping','uploading','retrying_upload'].includes(t.storage));
   const discInfo = d.disc_total > 1 ? `CD ${d.disc_number} van ${d.disc_total} · ` : '';
-  text('archive-status', saved.error || (saved.stored === saved.total && saved.total
+  text('archive-status', (saved.error && saved.buffer_message ? saved.error + ' ' + saved.buffer_message : saved.error || saved.buffer_message) || (saved.stored === saved.total && saved.total
     ? `${discInfo}Opgeslagen · ${saved.stored} nummers` + (saved.awaiting_metadata ? ' · wacht op albuminformatie voor Plex' : '')
     : `${discInfo}${p.playback_source === 'local' && playing ? 'Afspelen tijdens opslaan' : 'Automatisch opslaan'} · ${saved.stored || 0}/${saved.total || d.tracks.length}` +
       (activeRip ? ` · ${activeRip.storage === 'ripping' ? 'Uitlezen' : 'Uploaden'} ${activeRip.number}` : '')) +

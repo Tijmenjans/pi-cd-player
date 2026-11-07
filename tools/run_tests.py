@@ -13,7 +13,7 @@ ORIGINAL = ROOT
 ROOT = Path(sandbox.name)
 for source in ORIGINAL.glob('*.py'):
     shutil.copy2(source, ROOT/source.name)
-for name in ('tests', 'static', 'catalogue'):
+for name in ('tests', 'static', 'catalogue', 'archive-server', 'tools'):
     shutil.copytree(ORIGINAL/name, ROOT/name)
 (ROOT/'data').mkdir()
 (ROOT/'data/archive.json').write_text(json.dumps({'url':'https://archive.example.invalid','token':'offline-test','rip_speed':4}))

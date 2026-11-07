@@ -10,13 +10,14 @@ _lock = threading.Lock()
 _state = {'connected': False, 'logged_in': False, 'status': 'idle'}
 
 
-def observe():
-    while True:
+def observe(stop=None):
+    stop=stop or threading.Event()
+    while not stop.is_set():
         try:
-            with closing(websocket.create_connection(URL, timeout=30, suppress_origin=True)) as ws:
+            with closing(websocket.create_connection(URL, timeout=2, suppress_origin=True)) as ws:
                 with _lock:
                     _state['connected'] = True
-                while True:
+                while not stop.is_set():
                     try:
                         message = json.loads(ws.recv())
                     except websocket.WebSocketTimeoutException:
@@ -45,7 +46,7 @@ def observe():
         except Exception:
             with _lock:
                 _state['connected'] = False
-            time.sleep(3)
+            stop.wait(3)
 
 
 def snapshot():

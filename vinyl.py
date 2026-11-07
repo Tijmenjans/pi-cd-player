@@ -1,3 +1,4 @@
+from state_store import write_json
 """USB vinyl capture and background recognition; never blocks the player lock."""
 import array
 import copy
@@ -146,9 +147,7 @@ class Vinyl:
             raise ValueError('Kies een interval tussen 20 en 600 seconden.')
         with self.lock:
             self.interval_file.parent.mkdir(parents=True, exist_ok=True)
-            temp = self.interval_file.with_suffix('.tmp')
-            temp.write_text(json.dumps({'interval_seconds': seconds}))
-            temp.replace(self.interval_file)
+            write_json(self.interval_file,{'interval_seconds':seconds})
             self.interval = seconds
 
     def start(self, automatic=False):
@@ -255,8 +254,9 @@ class Vinyl:
                     self.detector.attempted(now)
                     self.state.update(state='error', track=None, message=str(exc))
 
-    def observe(self):
-        while True:
+    def observe(self,stop=None):
+        stop=stop or threading.Event()
+        while not stop.is_set():
             with self.lock:
                 active = self.active and self.state['automatic']
             if active:
@@ -270,4 +270,4 @@ class Vinyl:
                         self.state['live_level_db'] = None
             else:
                 self.meter.close()
-            time.sleep(0.25)
+            stop.wait(0.25)

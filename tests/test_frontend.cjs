@@ -66,6 +66,8 @@ assert.equal(elements['archive-status'].textContent,'Drive herstel');
 render({...base,source:'cd',archive:{blocked:2,drive_blocked:true,error:'USB-drive opnieuw aansluiten'}});
 assert.equal(elements['archive-retry'].hidden,true);
 assert.equal(elements['archive-status'].hidden,false);
+render({...base,source:'cd',disc:{...base.disc,present:true},archive:{buffer_full:true,buffer_message:'Lokale buffer vol; wacht op de muziekserver.',error:'Server offline'}});
+assert.equal(elements['archive-status'].textContent,'Server offline Lokale buffer vol; wacht op de muziekserver.');
 console.log('Import recovery controls and blocked-drive notice passed');
 (async()=>{
  render({...base,source:'plexamp',plexamp:{connected:true}});

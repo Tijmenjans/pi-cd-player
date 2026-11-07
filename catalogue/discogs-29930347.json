@@ -1,1 +1,280 @@
-{"id": "discogs-29930347", "title": "50 Hollandse Toppers", "artist": "Various Artists", "date": "2008", "country": "Netherlands", "barcode": "886971698824", "source": "https://www.discogs.com/release/29930347", "notes": "CD 1 verified against actual TOC and Shazam tracks 1 and 16; track 16 Discogs duration corrected to measured TOC length.", "media": [{"number": 1, "tracks": [{"title": "Maak Me Gek", "artist": "Gerard Joling", "seconds": 182}, {"title": "Boten Anna", "artist": "Gebroeders Ko", "seconds": 197}, {"title": "Heb Je Even Voor Mij", "artist": "Frans Bauer", "seconds": 199}, {"title": "Mijn Leven", "artist": "Thomas Berge", "seconds": 209}, {"title": "Ik Heb De Hele Nacht Liggen Dromen", "artist": "Wolter Kroes", "seconds": 247}, {"title": "Een Ster Vernoemd Naar Jou", "artist": "Helemaal Hollands", "seconds": 223}, {"title": "Hou Me Nog 1 Keer Vast", "artist": "Gordon", "seconds": 200}, {"title": "Big City", "artist": "Tol Hansse", "seconds": 202}, {"title": "Ik Kom Er Aan", "artist": "Dries Roelvink", "seconds": 214}, {"title": "Laat De Boel Maar Lekker Waaien", "artist": "Leo Nardell", "seconds": 170}, {"title": "Laat De Zon In Je Hart", "artist": "René Schuurmans", "seconds": 207}, {"title": "Sprookjes Bos", "artist": "The Cooldown Café", "seconds": 174}, {"title": "Leve De Lol", "artist": "Ed Nieman", "seconds": 191}, {"title": "Het Feest Kan Beginnen", "artist": "De Deurzakkers", "seconds": 225}, {"title": "Doe Maar Gek", "artist": "FeestDJ Maarten", "seconds": 186}, {"title": "Slaven Koor", "artist": "Assekruus", "seconds": 178.88}, {"title": "Wat Eten We Vanavond", "artist": "Anita & Ed", "seconds": 166}]}, {"number": 2, "tracks": [{"title": "Ik Dans Met Jou De Hele Nacht", "artist": "Jannes", "seconds": 182}, {"title": "De Italiaan", "artist": "Marianne Weber", "seconds": 215}, {"title": "Shanghai", "artist": "Stef Ekkel", "seconds": 238}, {"title": "Extase", "artist": "Erik Hulzebosch", "seconds": 209}, {"title": "Lief Klein Konijntje", "artist": "Henkie", "seconds": 163}, {"title": "Wat Een Lekker Ding", "artist": "Henk Damen", "seconds": 195}, {"title": "Meisjes Met Rode Haren", "artist": "Arne Jansen", "seconds": 235}, {"title": "Bij Ons Staat Op De Keukendeur", "artist": "De Twee Pinten", "seconds": 191}, {"title": "Meisjes Van De Nacht", "artist": "Edwin Roelvink", "seconds": 187}, {"title": "Toppertje", "artist": "Het Feestteam", "seconds": 181}, {"title": "Haar Naam Is Anita", "artist": "John Meijer", "seconds": 100}, {"title": "'n Ons Geluk", "artist": "Frans Bauer", "seconds": 204}, {"title": "Wasmasjien (FT DJ Maurice)", "artist": "Trafassi", "seconds": 210}, {"title": "Dans Je De Hele Nacht Met Mij", "artist": "De Sjonnies", "seconds": 228}, {"title": "Ik Krijg Een Heel Apart Gevoel Van Binnen", "artist": "Arie Konings", "seconds": 189}, {"title": "De Souza", "artist": "De Bloaskaken", "seconds": 151}, {"title": "Helemaal Gehad Met Jou", "artist": "Paula Paloma", "seconds": 240}]}, {"number": 3, "tracks": [{"title": "Ik Wil Met Je Mee", "artist": "Sascha Visser", "seconds": 232}, {"title": "Dan Zingen We 1,2,3", "artist": "Vader Abraham", "seconds": 206}, {"title": "C'est La Vie", "artist": "René Riva", "seconds": 233}, {"title": "Jij Bent De Zon", "artist": "Jop", "seconds": 194}, {"title": "Kus Me", "artist": "Bouke", "seconds": 188}, {"title": "In Ons Stamcafe", "artist": "Marianne Weber", "seconds": 195}, {"title": "Roekoekoe", "artist": "Gebroeders Ko", "seconds": 193}, {"title": "Duizend En Een Sterren", "artist": "Sjonnie En Anita", "seconds": 198}, {"title": "Ga Je Mee Naar Mijn Cafeetje", "artist": "Arie Ribbens", "seconds": 184}, {"title": "Macho Man", "artist": "Carrousel People", "seconds": 192}, {"title": "Ik Zie Een Ster", "artist": "Dikdakkers", "seconds": 209}, {"title": "Tokkie He Tokkie Ho", "artist": "En Gij Dan", "seconds": 165}, {"title": "Duudeljo", "artist": "Hanny", "seconds": 166}, {"title": "Annie Hou Jij M'n Tasie Ff Vast", "artist": "Nienke", "seconds": 185}, {"title": "Bloemetjesgordijn", "artist": "Wim Kersten En De Viltjes", "seconds": 216}, {"title": "De Kleine Krokodil", "artist": "Snappie", "seconds": 136}]}]}
+{
+  "id": "discogs-29930347",
+  "title": "50 Hollandse Toppers",
+  "artist": "Various Artists",
+  "date": "2008",
+  "country": "Netherlands",
+  "barcode": "886971698824",
+  "source": "https://www.discogs.com/release/29930347",
+  "notes": "CD 1 verified against actual TOC and Shazam tracks 1 and 16; track 16 Discogs duration corrected to measured TOC length.",
+  "media": [
+    {
+      "number": 1,
+      "tracks": [
+        {
+          "title": "Maak Me Gek",
+          "artist": "Gerard Joling",
+          "seconds": 182
+        },
+        {
+          "title": "Boten Anna",
+          "artist": "Gebroeders Ko",
+          "seconds": 197
+        },
+        {
+          "title": "Heb Je Even Voor Mij",
+          "artist": "Frans Bauer",
+          "seconds": 199
+        },
+        {
+          "title": "Mijn Leven",
+          "artist": "Thomas Berge",
+          "seconds": 209
+        },
+        {
+          "title": "Ik Heb De Hele Nacht Liggen Dromen",
+          "artist": "Wolter Kroes",
+          "seconds": 247
+        },
+        {
+          "title": "Een Ster Vernoemd Naar Jou",
+          "artist": "Helemaal Hollands",
+          "seconds": 223
+        },
+        {
+          "title": "Hou Me Nog 1 Keer Vast",
+          "artist": "Gordon",
+          "seconds": 200
+        },
+        {
+          "title": "Big City",
+          "artist": "Tol Hansse",
+          "seconds": 202
+        },
+        {
+          "title": "Ik Kom Er Aan",
+          "artist": "Dries Roelvink",
+          "seconds": 214
+        },
+        {
+          "title": "Laat De Boel Maar Lekker Waaien",
+          "artist": "Leo Nardell",
+          "seconds": 170
+        },
+        {
+          "title": "Laat De Zon In Je Hart",
+          "artist": "René Schuurmans",
+          "seconds": 207
+        },
+        {
+          "title": "Sprookjes Bos",
+          "artist": "The Cooldown Café",
+          "seconds": 174
+        },
+        {
+          "title": "Leve De Lol",
+          "artist": "Ed Nieman",
+          "seconds": 191
+        },
+        {
+          "title": "Het Feest Kan Beginnen",
+          "artist": "De Deurzakkers",
+          "seconds": 225
+        },
+        {
+          "title": "Doe Maar Gek",
+          "artist": "FeestDJ Maarten",
+          "seconds": 186
+        },
+        {
+          "title": "Slaven Koor",
+          "artist": "Assekruus",
+          "seconds": 178.88
+        },
+        {
+          "title": "Wat Eten We Vanavond",
+          "artist": "Anita & Ed",
+          "seconds": 166
+        }
+      ],
+      "disc_ids": [
+        "XsvEEE9UjniOj_MDfNBwpdI9UDA-"
+      ]
+    },
+    {
+      "number": 2,
+      "tracks": [
+        {
+          "title": "Ik Dans Met Jou De Hele Nacht",
+          "artist": "Jannes",
+          "seconds": 182
+        },
+        {
+          "title": "De Italiaan",
+          "artist": "Marianne Weber",
+          "seconds": 215
+        },
+        {
+          "title": "Shanghai",
+          "artist": "Stef Ekkel",
+          "seconds": 238
+        },
+        {
+          "title": "Extase",
+          "artist": "Erik Hulzebosch",
+          "seconds": 209
+        },
+        {
+          "title": "Lief Klein Konijntje",
+          "artist": "Henkie",
+          "seconds": 163
+        },
+        {
+          "title": "Wat Een Lekker Ding",
+          "artist": "Henk Damen",
+          "seconds": 195
+        },
+        {
+          "title": "Meisjes Met Rode Haren",
+          "artist": "Arne Jansen",
+          "seconds": 235
+        },
+        {
+          "title": "Bij Ons Staat Op De Keukendeur",
+          "artist": "De Twee Pinten",
+          "seconds": 191
+        },
+        {
+          "title": "Meisjes Van De Nacht",
+          "artist": "Edwin Roelvink",
+          "seconds": 187
+        },
+        {
+          "title": "Toppertje",
+          "artist": "Het Feestteam",
+          "seconds": 181
+        },
+        {
+          "title": "Haar Naam Is Anita",
+          "artist": "John Meijer",
+          "seconds": 100
+        },
+        {
+          "title": "'n Ons Geluk",
+          "artist": "Frans Bauer",
+          "seconds": 204
+        },
+        {
+          "title": "Wasmasjien (FT DJ Maurice)",
+          "artist": "Trafassi",
+          "seconds": 210
+        },
+        {
+          "title": "Dans Je De Hele Nacht Met Mij",
+          "artist": "De Sjonnies",
+          "seconds": 228
+        },
+        {
+          "title": "Ik Krijg Een Heel Apart Gevoel Van Binnen",
+          "artist": "Arie Konings",
+          "seconds": 189
+        },
+        {
+          "title": "De Souza",
+          "artist": "De Bloaskaken",
+          "seconds": 151
+        },
+        {
+          "title": "Helemaal Gehad Met Jou",
+          "artist": "Paula Paloma",
+          "seconds": 240
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "tracks": [
+        {
+          "title": "Ik Wil Met Je Mee",
+          "artist": "Sascha Visser",
+          "seconds": 232
+        },
+        {
+          "title": "Dan Zingen We 1,2,3",
+          "artist": "Vader Abraham",
+          "seconds": 206
+        },
+        {
+          "title": "C'est La Vie",
+          "artist": "René Riva",
+          "seconds": 233
+        },
+        {
+          "title": "Jij Bent De Zon",
+          "artist": "Jop",
+          "seconds": 194
+        },
+        {
+          "title": "Kus Me",
+          "artist": "Bouke",
+          "seconds": 188
+        },
+        {
+          "title": "In Ons Stamcafe",
+          "artist": "Marianne Weber",
+          "seconds": 195
+        },
+        {
+          "title": "Roekoekoe",
+          "artist": "Gebroeders Ko",
+          "seconds": 193
+        },
+        {
+          "title": "Duizend En Een Sterren",
+          "artist": "Sjonnie En Anita",
+          "seconds": 198
+        },
+        {
+          "title": "Ga Je Mee Naar Mijn Cafeetje",
+          "artist": "Arie Ribbens",
+          "seconds": 184
+        },
+        {
+          "title": "Macho Man",
+          "artist": "Carrousel People",
+          "seconds": 192
+        },
+        {
+          "title": "Ik Zie Een Ster",
+          "artist": "Dikdakkers",
+          "seconds": 209
+        },
+        {
+          "title": "Tokkie He Tokkie Ho",
+          "artist": "En Gij Dan",
+          "seconds": 165
+        },
+        {
+          "title": "Duudeljo",
+          "artist": "Hanny",
+          "seconds": 166
+        },
+        {
+          "title": "Annie Hou Jij M'n Tasie Ff Vast",
+          "artist": "Nienke",
+          "seconds": 185
+        },
+        {
+          "title": "Bloemetjesgordijn",
+          "artist": "Wim Kersten En De Viltjes",
+          "seconds": 216
+        },
+        {
+          "title": "De Kleine Krokodil",
+          "artist": "Snappie",
+          "seconds": 136
+        }
+      ]
+    }
+  ]
+}

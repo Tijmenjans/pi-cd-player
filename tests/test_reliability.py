@@ -92,11 +92,13 @@ class ArchiveTests(unittest.TestCase):
   self.assertFalse(self.a._produce_once());self.assertFalse(target.exists());self.assertTrue(self.a.uploads.empty())
  def test_server_error_not_counted_as_optical_failure(self):
   self.cloud.request=Mock(side_effect=TimeoutError('server'))
-  self.assertFalse(self.a._produce_once());self.assertFalse(self.a.failures)
+  self.a._rip=self.fake_rip
+  self.assertFalse(self.a._register(self.disc,self.a.generation))
+  self.assertTrue(self.a._produce_once());self.assertFalse(self.a.failures)
   self.assertIn('server',self.a.snapshot()['error'])
  def test_drive_busy_does_not_spend_track_retries(self):
   self.a._rip=Mock(side_effect=DriveBusy('drive busy'))
-  self.assertFalse(self.a._produce_once());self.assertFalse(self.a.failures);self.assertTrue(self.a.snapshot()['drive_blocked'])
+  self.assertFalse(self.a._produce_once());self.assertFalse(self.a.failures);self.assertFalse(self.a.snapshot()['drive_blocked'])
  def test_manual_retry_resets_only_read_failures_and_retains_manual_skip(self):
   self.a.failures['TESTDISC1:1']=3;self.a.states[1]={'storage':'blocked'};self.a.states[2]={'storage':'skipped'}
   self.a.retry_failed();self.assertEqual(self.a.states[1]['storage'],'pending');self.assertEqual(self.a.states[2]['storage'],'skipped')

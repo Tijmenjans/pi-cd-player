@@ -11,3 +11,7 @@ De systeemreparatie van 7 november staat in deploy/repair-superdrive.sh en is al
 DVD stoppen/uitwerpen loopt via de app zodat eerst de reader eindigt. De publieke IMDb-interface kan veranderen; een ontbrekende poster is geen reden de videopipeline aan te passen. Geen DVD-upload of staging herstellen.
 
 Bluetooth/vinyl: controleer eerst de bestaande reconnect-timer en PipeWire-links. Een eerdere melding van haperingen is niet definitief door een bufferwijziging verklaard. Wifi-power-saving niet zonder praktijkdiagnose blijvend aanpassen. De historische README bevat oude proefinstellingen en is geen huidig installatievoorschrift.
+
+Na deze verbeteringen vereist onbekende cd-audio geen succesvolle serverregistratie vóór lokaal lezen. Twee stagingplaatsen kunnen bij langdurige netwerkuitval vol raken: herstel de verbinding en laat uploadherstel doorgaan. Wis geen WAVs om ruimte te forceren. Opslag- en configuratiefouten worden apart gemeld en verbruiken geen optische pogingen. Een korte bezette lease is geen bewijs van een kernelhang.
+
+Een VPS-crash tussen WAV-rename en databasecommit kan na restart worden hersteld door begrensde raw-reconciliatie. Alleen volledige, bij een geregistreerde TOC passende WAVs worden geregistreerd; ongeldige/onbekende bestanden blijven onaangeroerd. Plex-refresh heeft eigen persistente retry/backoff; een Plex-storing betekent niet dat een volledig FLAC-bestand opnieuw moet worden geript of geüpload.

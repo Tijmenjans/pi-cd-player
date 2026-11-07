@@ -46,7 +46,7 @@ class OpticalLease:
             if self.legacy_readers():raise DriveBusy('De USB-cd-drive is nog bezig met een eerdere opdracht')
             return handle
         except (BlockingIOError,DriveBusy):
-            handle.close();raise DriveBusy('De USB-cd-drive reageert niet op stoppen. Sluit de drive opnieuw aan; opgeslagen nummers blijven bewaard.')
+            handle.close();raise DriveBusy('De optische drive is nog in gebruik door een andere opdracht; wacht tot die klaar is.')
     def busy(self):
         try:handle=self.acquire()
         except DriveBusy:return True

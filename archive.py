@@ -16,6 +16,7 @@ import urllib.parse
 import urllib.request
 import wave
 from pathlib import Path
+from state_store import write_json
 from live_audio import GrowingWav, RATE
 from optical_reader import OpticalLease, ProgressWatchdog, ReadFailure, DriveBusy, stop_process
 
@@ -101,6 +102,8 @@ class Archive:
         self.reader_error = None
         self.upload_error = None
         self.server_error = None
+        self.buffer_full = False
+        self.registration_lock = threading.Lock()
         self.drive_blocked = False
         self.recovery_path = self.root/'data'/'archive-recovery.json'
         try:self.recovery=json.loads(self.recovery_path.read_text())
@@ -109,8 +112,8 @@ class Archive:
         self.failures=self.recovery.get('failures',{})
         if not isinstance(self.failures,dict):self.failures={}
         self.failures={key:value for key,value in self.failures.items() if isinstance(key,str) and type(value) is int and 0<=value<=3}
-        self.speed_limit=self.recovery.get('speed_limit',8)
-        if type(self.speed_limit) is not int or not 1<=self.speed_limit<=48:self.speed_limit=8
+        self.speed_limit=self.recovery.get('speed_limit',4)
+        if type(self.speed_limit) is not int or not 1<=self.speed_limit<=48:self.speed_limit=4
         self.optical=OpticalLease(self.stage/'optical.lock',self.root/'vendor/ripping/usr/bin/cdparanoia')
         try: self.skipped = json.loads((self.root/'data'/'archive-skipped.json').read_text())
         except (OSError, ValueError): self.skipped = {}
@@ -119,7 +122,7 @@ class Archive:
         self.metrics_path = self.root/'data'/'archive-metrics.json'
         try: self.metrics = json.loads(self.metrics_path.read_text())[-80:]
         except (OSError, ValueError): self.metrics = []
-        # An optional measured setting. Default keeps the drive's automatic speed.
+        # Optional explicit setting; safe SuperDrive fallback is 4x.
         config = json.loads((self.root/'data'/'archive.json').read_text())
         self.rip_speed = config.get('rip_speed')
         if self.rip_speed is not None and (type(self.rip_speed) is not int or not 1 <= self.rip_speed <= 48):
@@ -157,7 +160,7 @@ class Archive:
             self.generation += 1
             for live in self.local.values():live.fail()
             self.local.clear();self.selected_local=None
-            proc=self.process;self.disc=None
+            proc=self.process;self.disc=None;self.buffer_full=False
             self.wake.set();self.upload_wake.set()
         stopped=stop_process(proc)
         with self.lock:
@@ -171,14 +174,15 @@ class Archive:
 
     def _save_recovery(self):
         self.recovery.update(failures=self.failures,speed_limit=self.speed_limit)
-        tmp=self.recovery_path.with_suffix('.tmp');tmp.write_text(json.dumps(self.recovery));tmp.replace(self.recovery_path)
+        write_json(self.recovery_path, self.recovery, durable=True)
 
     def _read_failed(self,identity,number,message):
         key=self._failure_key(identity,number)
         count=self.failures.get(key,0)+1;self.failures[key]=count
-        speed=min(self.rip_speed or 8,self.speed_limit)
+        speed=min(self.rip_speed or 4,self.speed_limit)
         self.speed_limit=next((n for n in (8,4,2,1) if n<speed),1)
-        self._save_recovery()
+        try:self._save_recovery()
+        except OSError:logging.warning('Leesherstelstatus kon niet worden opgeslagen')
         self.retry_after[(identity,number)]=time.monotonic()+min(300,30*count)
         self.reader_error=f'Nummer {number}: {message}. Andere nummers worden eerst opgeslagen.'
         self.states[number]={'storage':'blocked' if count>=3 else 'error','ready':False,'attempts':count,'message':self.reader_error,'retry_speed':self.speed_limit}
@@ -264,7 +268,8 @@ class Archive:
             upload_messages=[v.get('message') for v in self.states.values() if v.get('storage')=='retrying_upload' and v.get('message')]
             self.error=('De USB-cd-drive reageert niet. Sluit de drive opnieuw aan; alle opgeslagen nummers blijven bewaard.' if self.drive_blocked else next(iter(read_messages),None) or next(iter(upload_messages),None) or self.server_error)
             result = {'states':copy.deepcopy(self.states),'error':self.error,
-                      'drive_blocked':self.drive_blocked,'speed':min(self.rip_speed or 8,self.speed_limit),
+                      'buffer_full':self.buffer_full,'buffer_message':'Lokale buffer vol; wacht op de muziekserver.' if self.buffer_full else None,
+                      'drive_blocked':self.drive_blocked,'speed':min(self.rip_speed or 4,self.speed_limit),
                       'blocked':sum(s.get('storage')=='blocked' for s in self.states.values()),
                       'stored':sum(bool(s.get('ready')) for s in self.states.values()),
                       'total':len(self.states)}
@@ -283,14 +288,7 @@ class Archive:
     def reading(self):
         with self.lock:
             if self.process is not None and self.process.poll() is None:return True
-        occupied=self.optical.busy()
-        if occupied:
-            with self.lock:
-                self.drive_blocked=True
-                self.reader_error='De USB-cd-drive is nog geblokkeerd door een leesopdracht. Sluit de drive opnieuw aan; opgeslagen nummers blijven bewaard.'
-        elif self.drive_blocked:
-            with self.lock:self.drive_blocked=False;self.reader_error=None
-        return occupied
+        return self.optical.busy()
 
     def monitor(self):
         # Conversion of track 1 must become visible while track 2 is being read.
@@ -298,8 +296,9 @@ class Archive:
         while not self.stopping.wait(1.5):
             with self.lock:
                 if not self.disc: continue
-                identity=self.disc['id'];generation=self.generation
+                identity=self.disc['id'];generation=self.generation;manifest=copy.deepcopy(self.disc)
             try:
+                if not self._register(manifest,generation):continue
                 self._receive(self.cloud.request('/v1/discs/'+identity),generation)
             except Exception:
                 with self.lock:self.server_error='Muziekserver tijdelijk onbereikbaar; lokale bestanden blijven bewaard.'
@@ -330,8 +329,8 @@ class Archive:
             self.metrics.append({'disc':disc,'track':number,'phase':phase,
                                  'seconds':round(seconds,3),'bytes':size,'at':time.time()})
             self.metrics=self.metrics[-80:]
-            tmp=self.metrics_path.with_suffix('.tmp')
-            tmp.write_text(json.dumps(self.metrics));tmp.replace(self.metrics_path)
+            try:write_json(self.metrics_path, self.metrics)
+            except OSError:logging.warning('Timinggegevens konden niet worden opgeslagen')
 
     def _rip(self, disc, number, generation, target):
         sectors=next(t['sectors'] for t in disc['tracks'] if t['number']==number)
@@ -354,7 +353,7 @@ class Archive:
                     if old:old.fail()
                     self.local[number]=live
                     config=json.loads((self.root/'data/archive.json').read_text())
-                    requested=config.get('rip_speed',self.rip_speed) or 8
+                    requested=config.get('rip_speed',self.rip_speed) or 4
                     if type(requested) is not int or not 1<=requested<=48:raise ValueError('Ongeldige uitleessnelheid')
                     speed=min(requested,self.speed_limit);self.rip_speed=requested
                     self.states[number]={'storage':'ripping','ready':False,'progress':0,'speed':speed,'attempts':self.failures.get(self._failure_key(disc['id'],number),0)+1}
@@ -396,6 +395,25 @@ class Archive:
             lease.close()
             if stopped:partial.unlink(missing_ok=True)
 
+    def _register(self, disc, generation, strict=False):
+        signature=json.dumps(disc,sort_keys=True)
+        with self.registration_lock:
+            with self.lock:
+                if generation!=self.generation:return False
+                if self.registered==signature:return True
+            try:
+                payload=self.cloud.request('/v1/discs/'+disc['id'],disc)
+                self._receive(payload,generation)
+                with self.lock:
+                    if generation!=self.generation:return False
+                    self.registered=signature
+                return True
+            except Exception:
+                with self.lock:
+                    if generation==self.generation:self.server_error='Muziekserver tijdelijk onbereikbaar; lokaal afspelen en veilig bewaren blijven mogelijk.'
+                if strict:raise
+                return False
+
     def _produce_once(self):
         """Reserve one of two staging slots, then read at most one optical track."""
         reserved = False
@@ -405,16 +423,13 @@ class Archive:
             if not self.disc: return False
             disc = copy.deepcopy(self.disc)
             generation = self.generation
-            signature = json.dumps(disc,sort_keys=True)
         try:
-            if self.registered != signature:
-                payload = self.cloud.request('/v1/discs/'+disc['id'],disc)
-                self._receive(payload,generation)
-                with self.lock:
-                    if generation != self.generation: return False
-                    self.registered = signature
+            # Registration failure must not prevent local playback or WAV reuse.
             reserved = self.slots.acquire(timeout=.2)
-            if not reserved: return False
+            if not reserved:
+                with self.lock:self.buffer_full=True
+                return False
+            with self.lock:self.buffer_full=False
             with self.lock:
                 if generation != self.generation: return False
                 pending=[n for n in self.order if not self.states.get(n,{}).get('uploaded')
@@ -459,10 +474,14 @@ class Archive:
             with self.lock:
                 if generation==self.generation:
                     if isinstance(exc,DriveBusy):
-                        self.drive_blocked=True;self.reader_error=str(exc)
+                        self.reader_error=str(exc)
+                        self.retry_after[(disc['id'],number)]=time.monotonic()+1
                     elif number is not None:
-                        message=str(exc) if isinstance(exc,RuntimeError) else 'Lokale lees- of opslagfout'
-                        self._read_failed(disc['id'],number,message)
+                        if isinstance(exc,ReadFailure):self._read_failed(disc['id'],number,str(exc))
+                        else:
+                            self.reader_error=(str(exc) if isinstance(exc,(OpticalDeviceError,RuntimeError)) else 'Lokale opslag of configuratie niet beschikbaar; volledige bestanden blijven bewaard.')
+                            self.states[number]={'storage':'error','ready':False,'message':self.reader_error}
+                            self.retry_after[(disc['id'],number)]=time.monotonic()+30
                     else:self.server_error='Registratie bij de muziekserver mislukt; wordt opnieuw geprobeerd.'
             return False
         finally:
@@ -479,6 +498,11 @@ class Archive:
                 if generation!=self.generation:return
                 if not self.states.get(number,{}).get('uploaded'):
                     self.states[number]={'storage':'uploading','ready':False,'progress':0,'attempts':job.get('attempts',0)+1}
+            with self.lock:manifest=copy.deepcopy(self.disc)
+            if not self._register(manifest,generation,strict=True):return
+            with self.lock:confirmed=bool(self.states.get(number,{}).get('uploaded'))
+            if confirmed:
+                target.unlink(missing_ok=True);return
             if job.get('retry'):
                 payload=self.cloud.request('/v1/discs/'+identity)
                 if any(t['number']==number and t.get('uploaded') for t in payload['tracks']):
@@ -507,7 +531,7 @@ class Archive:
         finally:
             if not retained:
                 with self.lock:self.inflight.discard((identity,number))
-                self.slots.release();self.wake.set()
+                self.slots.release();self.buffer_full=False;self.wake.set()
 
     def upload_loop(self):
         while not self.stopping.is_set():

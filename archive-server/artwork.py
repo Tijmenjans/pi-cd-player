@@ -79,13 +79,29 @@ def get_cover(release,folder):
     raise FileNotFoundError('Geen cover voor deze uitgave gevonden')
 
 
-def matching_albums(manifest):
+def matching_albums(manifest,cached=None):
     release=manifest['release']
     albums=[]
     track=next((t for t in manifest['tracks'] if server.publishable(manifest,t['number'])),None)
     if track is None:return []
     expected=server.destination(manifest,track['number']).parent
     expected_plex='/music/'+str(expected.relative_to(server.MUSIC))
+    if cached:
+        try:
+            found=[]
+            for key in cached:
+                if not str(key).isdecimal():raise ValueError('Ongeldige Plex-ID')
+                container=server.plex_request('/library/metadata/'+str(key))
+                album=next(iter(container))
+                if album.get('type')!='album':raise ValueError('Geen album')
+                tracks=server.plex_request('/library/metadata/'+str(key)+'/children')
+                if not any(str(Path(p.get('file','')).parent)==expected_plex for p in tracks.findall('.//Part')):
+                    raise ValueError('Albumverwijzing is veranderd')
+                found.append(album)
+            if found:return found
+        except urllib.error.HTTPError as exc:
+            if exc.code!=404:raise
+        except (ValueError,StopIteration,TypeError):pass
     for section in server.plex_request('/library/sections'):
         if section.get('type')!='artist' or not any(x.get('path')=='/music' for x in section): continue
         for album in server.plex_request('/library/sections/'+section.get('key')+'/all',
@@ -123,9 +139,10 @@ def process(manifest,state):
     if old.get('release')==release and time.time()<old.get('retry_at',0):return False
     if old.get('release')==release and old.get('status')=='applied':
         if any((folder/('cover'+e)).exists() for e in ['.jpg','.png']):return False
+    albums=[]
     try:
         path,data=get_cover(release,folder)
-        albums=matching_albums(manifest)
+        albums=matching_albums(manifest,old.get('albums'))
         if not albums:raise RuntimeError('Album wordt nog door Plex geïndexeerd')
         digest=hashlib.sha256(data).hexdigest()
         for album in albums:upload_poster(album.get('ratingKey'),data)
@@ -135,7 +152,7 @@ def process(manifest,state):
     except Exception as exc:
         interval=21600 if isinstance(exc,FileNotFoundError) else 120
         state[key]={'release':release,'status':'retry','retry_at':time.time()+interval,
-                    'error':type(exc).__name__}
+                    'error':type(exc).__name__,'albums':[a.get('ratingKey') for a in albums] or old.get('albums',[])}
         logging.warning('Albumcover opnieuw proberen: %s',type(exc).__name__)
     return True
 

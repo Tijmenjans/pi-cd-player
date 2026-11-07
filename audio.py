@@ -2,6 +2,7 @@
 import json
 import subprocess
 import time
+import threading
 
 output = {'name': 'Audio-uitgang', 'type': 'unknown', 'speaker_connected': False}
 
@@ -10,9 +11,10 @@ def snapshot():
     return dict(output)
 
 
-def observe():
+def observe(stop=None):
+    stop=stop or threading.Event()
     global output
-    while True:
+    while not stop.is_set():
         try:
             nodes = json.loads(subprocess.check_output(['pw-dump'], timeout=5))
             metadata = next(n for n in nodes if n.get('type', '').endswith(':Metadata')
@@ -28,4 +30,4 @@ def observe():
                       'type': 'bluetooth' if bluetooth else 'aux', 'speaker_connected': speaker_connected}
         except Exception:
             output = {'name': 'Audio-uitgang onbekend', 'type': 'unknown', 'speaker_connected': False}
-        time.sleep(5)
+        stop.wait(5)

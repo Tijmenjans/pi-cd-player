@@ -1,3 +1,5 @@
+from state_store import write_text, write_json, read_text
+from optical_reader import DriveBusy
 from optical_device import optical_device, OpticalDeviceError
 import json
 import copy
@@ -34,10 +36,10 @@ vinyl = Vinyl(ROOT)
 lock = threading.RLock()
 disc = {'present': False, 'tracks': [], 'loading': True}
 source_file = DATA / 'source'
-source = source_file.read_text().strip() if source_file.exists() else 'cd'
+source = read_text(source_file, 'cd')
 source = source if source in ('cd', 'spotify', 'plexamp', 'vinyl', 'dvd') else 'cd'
 streaming_source_file = DATA / 'streaming-source'
-streaming_source = streaming_source_file.read_text().strip() if streaming_source_file.exists() else 'spotify'
+streaming_source = read_text(streaming_source_file, 'spotify')
 streaming_source = streaming_source if streaming_source in ('spotify', 'plexamp') else 'spotify'
 
 
@@ -71,58 +73,84 @@ def mpd(*commands):
 
 
 archive = Archive(ROOT)
-dvd = DVD(ROOT)
+dvd = DVD(ROOT, observe=False, optical=archive.optical)
 queue = ArchiveQueue(mpd, DATA / "archive-queue.json", archive)
 
 def values(rows):
     return dict(row.split(': ', 1) for row in rows if ': ' in row)
 
 
+transition_lock = threading.RLock()
+transition = {'active': False, 'target': None, 'error': None}
+status_cache = {}
+
 def choose_source(new):
+    with transition_lock:
+        return _choose_source(new)
+
+def _choose_source(new):
     global source, streaming_source
     if dvd.is_streaming() and new != source:
         raise RuntimeError('Stop eerst de VLC-stream op de Apple TV.')
     if new == 'dvd':
         archive.cancel()
-        if archive.reading():raise RuntimeError('De USB-cd-drive reageert niet. Sluit de drive eerst opnieuw aan.')
+        if archive.reading():raise RuntimeError('De optische drive is nog bezig. Wacht tot de opdracht klaar is.')
     if new == 'spotify' and not (DATA / 'soloist.env').exists():
         raise RuntimeError('Spotify moet nog eenmalig worden ingesteld met je persoonlijke Soloist-sleutel.')
     if new == 'plexamp' and not plexamp.configured():
         raise RuntimeError('Plexamp moet nog eenmalig aan je Plex-account worden gekoppeld.')
     if new == 'vinyl' and not vinyl.connected():
         raise RuntimeError('Sluit eerst de UFO202 aan op de Pi.')
-    queue.last = None
-    # Stop the previous engine before opening the shared AUX output.
+    previous, previous_streaming = source, streaming_source
     engines = {'cd': 'mpd', 'spotify': 'spotify', 'plexamp': 'plexamp', 'vinyl': 'vinyl'}
-    for name, engine in engines.items():
-        if name != new:
-            service('stop', engine)
-    if new == 'spotify' and source != new:
-        (DATA / 'spotify.json').write_text(json.dumps({'state': 'ready'}))
+    old_files = {path: read_text(path, None) for path in (source_file, streaming_source_file)}
+    transition.update(active=True, target=new, error=None)
+    started = False
     try:
+        for name, engine in engines.items():
+            if name != new:service('stop', engine)
+        if new == 'spotify' and previous != new:
+            write_json(DATA / 'spotify.json', {'state':'ready'})
         if new in engines:
+            started=True
             service('start', engines[new])
-    except Exception:
-        if source in engines:
-            service('start', engines[source])
-        raise RuntimeError('De streamingdienst kon niet starten. Probeer opnieuw.')
-    if new == 'cd':
-        for attempt in range(150):
+        if new == 'cd':
+            deadline=time.monotonic()+30
+            while True:
+                try:mpd('ping');break
+                except (OSError, RuntimeError):
+                    if time.monotonic()>=deadline:raise RuntimeError('De cd-speler kon niet opstarten.')
+                    time.sleep(.2)
+            queue.reset_engine()
+        write_text(source_file,new)
+        if new in ('spotify','plexamp'):write_text(streaming_source_file,new)
+        vinyl.set_active(new=='vinyl')
+        dvd.set_active(new=='dvd')
+        with lock:
+            queue.last=None
+            source=new
+            if new in ('spotify','plexamp'):streaming_source=new
+    except Exception as exc:
+        errors=[]
+        if started and new!=previous and new in engines:
+            try:service('stop',engines[new])
+            except Exception:errors.append('doeldienst stoppen')
+        if previous in engines:
+            try:service('start',engines[previous])
+            except Exception:errors.append('vorige dienst starten')
+        for path,value in old_files.items():
             try:
-                mpd('ping')
-                break
-            except (OSError, RuntimeError):
-                if attempt == 149:
-                    raise RuntimeError('De cd-speler kon niet opstarten.')
-                time.sleep(0.2)
-        queue.reset_engine()
-    source = new
-    vinyl.set_active(new == 'vinyl')
-    dvd.set_active(new == 'dvd')
-    source_file.write_text(new)
-    if new in ('spotify', 'plexamp'):
-        streaming_source = new
-        streaming_source_file.write_text(new)
+                if value is None:path.unlink(missing_ok=True)
+                else:write_text(path,value)
+            except OSError:errors.append('instellingen herstellen')
+        for adapter,active in ((vinyl,previous=='vinyl'),(dvd,previous=='dvd')):
+            try:adapter.set_active(active)
+            except Exception:errors.append('bronstatus herstellen')
+        with lock:source,streaming_source=previous,previous_streaming
+        transition['error']='Bronwissel mislukt.' + (' Herstel onvolledig: '+', '.join(errors)+'.' if errors else ' Vorige bron hersteld.')
+        raise RuntimeError(transition['error']) from exc
+    finally:
+        transition['active']=False
 
 
 def get_json(url):
@@ -152,7 +180,7 @@ def get_musicbrainz_json(url):
 
 def metadata_wait(snapshot,job,seconds):
     deadline=time.monotonic()+seconds
-    while True:
+    while not runtime_stop.is_set():
         with lock:
             if disc.get('id')!=snapshot['id'] or metadata_jobs.get(snapshot['id']) is not job:
                 return False
@@ -167,7 +195,7 @@ def enrich(snapshot):
     delays=(5,15,30,60,120,300)
     attempt=0
     try:
-        while True:
+        while not runtime_stop.is_set():
             with lock:
                 if disc.get('id')!=snapshot['id'] or metadata_jobs.get(snapshot['id']) is not job:return
             retry=enrich_once(snapshot,job)
@@ -217,7 +245,7 @@ def enrich_once(snapshot,job=None):
             except (OSError,ValueError,AttributeError):chosen=None
             if chosen and any(r['id']==chosen for r in metadata.get('releases',[])):
                 metadata['selected']=chosen
-            temp=cache.with_suffix('.tmp');temp.write_text(json.dumps(metadata));temp.replace(cache)
+            write_json(cache,metadata)
         releases = metadata.get('releases', [])
         preferred = metadata.get('selected')
         automatic=releases[0] if releases and (metadata.get('match_kind')!='toc' or len(releases)==1) else None
@@ -294,24 +322,27 @@ def media_changed():
 
 def accept_disc(snapshot, autoplay):
     global disc
-    with lock:
-        disc = snapshot
-        queue.attach(disc, reset=autoplay)
+    with transition_lock:
+        with lock:disc=snapshot
+        queue.attach(snapshot,reset=autoplay)
         if autoplay:
             try:
                 choose_source('cd')
-                mpd('stop', 'clear')
+                mpd('stop','clear')
                 load_queue()
-                queue.action(disc,'play',{})
-                if queue.data.get('shuffle'):
-                    queue.action(disc,'shuffle',{'enabled':True})
+                queue.action(snapshot,'play',{})
+                if queue.data.get('shuffle'):queue.action(snapshot,'shuffle',{'enabled':True})
             except Exception:
                 app.logger.exception('Automatic CD playback failed')
-                disc['autoplay_error'] = 'Automatisch starten is niet gelukt. Druk op afspelen om opnieuw te proberen.'
+                with lock:disc['autoplay_error']='Automatisch starten is niet gelukt. Druk op afspelen om opnieuw te proberen.'
 
 
 def verified_disc_media(snapshot):
-    media=disc_media.cached_probe(snapshot,DATA)
+    with archive.optical.acquire() as lease:
+        return _verified_disc_media(snapshot, lease)
+
+def _verified_disc_media(snapshot, lease):
+    media=disc_media.cached_probe(snapshot,DATA,lease_fd=lease.fileno())
     # A user may have swapped the CD while its slow lead-in was being read.
     # Do not apply or retain that result under the previous disc's identity.
     try: current=libdiscid.read(optical_device(),features=libdiscid.FEATURE_READ)
@@ -333,20 +364,23 @@ def scan_loop():
     global disc
     last = None
     initialized = False
-    while True:
+    while not runtime_stop.is_set():
         try:
             # Only one process reads the drive. TOC/metadata polling must not seek
             # over a track currently being extracted.
-            if source == 'dvd' or dvd.busy() or archive.reading():
+            if transition['active'] or source == 'dvd' or dvd.busy() or archive.reading():
                 time.sleep(1)
                 continue
-            changed = media_changed()
-            if initialized and last is not None and not changed:
+            try:
+                with archive.optical.acquire():
+                    changed = media_changed()
+                    cd = None if initialized and last is not None and not changed else libdiscid.read(optical_device(), features=libdiscid.FEATURE_READ)
+                if cd is None:
+                    time.sleep(1)
+                    continue
+            except DriveBusy:
                 time.sleep(1)
                 continue
-            # Optional MCN/ISRC reads seek around the disc and can take seconds.
-            # Track offsets are sufficient for playback and MusicBrainz lookup.
-            cd = libdiscid.read(optical_device(), features=libdiscid.FEATURE_READ)
             # A drive may leave MEDIA_CHANGED set until the rip finishes.
             # The TOC identity, not that flag, decides whether to reset playback.
             # A real removal already clears last in the DiscError handler.
@@ -361,8 +395,8 @@ def scan_loop():
                                        for i, sectors in enumerate(cd.track_lengths)]}
                 # Stop the previous generation before reading the lead-in: an
                 # old reader must not start another track during the CD-Text query.
+                archive.cancel()
                 with lock:
-                    archive.cancel()
                     disc={'present':False,'loading':True,'tracks':[],
                           'metadata_status':'reading_cdtext'}
                 snapshot=prepare_disc(snapshot)
@@ -379,14 +413,12 @@ def scan_loop():
             with lock:disc={'present':False,'loading':False,'tracks':[],'scan_error':str(exc)}
             last=None
         except libdiscid.DiscError:
-            with lock:
+            with transition_lock:
                 archive.cancel()
                 if last is not None and source == 'cd':
-                    try:
-                        mpd('stop', 'clear')
-                    except Exception:
-                        pass
-                disc = {'present': False, 'loading': False, 'tracks': []}
+                    try:mpd('stop', 'clear')
+                    except Exception:pass
+                with lock:disc = {'present': False, 'loading': False, 'tracks': []}
             last = None
         except Exception:
             with lock:
@@ -403,10 +435,10 @@ def load_queue():
 
 
 def queue_loop():
-    while True:
+    while not runtime_stop.is_set():
         try:
-            with lock:
-                if source == 'cd' and disc.get('present'):
+            with transition_lock:
+                if not transition['active'] and source == 'cd' and disc.get('present'):
                     queue.observe(disc)
         except Exception:
             app.logger.warning('Queue monitor temporarily unavailable')
@@ -505,18 +537,20 @@ def dvd_cover(filename):
 @app.get('/dvd/live.mkv')
 @app.get('/dvd/live.mpg')
 def dvd_live_stream():
-    with lock:
+    with transition_lock:
         if source != 'dvd':return jsonify(error='Kies eerst DVD.'),409
         try:token=dvd.reserve_stream()
         except RuntimeError as exc:return jsonify(error=str(exc)),409
     child=None
     try:
         with dvd.io_lock:
+            with dvd.lock:
+                if dvd.session!=token:raise RuntimeError('Stream geannuleerd')
             media=dvd.probe()
             if not media:raise RuntimeError('Geen leesbare video-dvd')
-            streams=dvd_streaming.inspect(ROOT/'vendor/dvd/usr/bin/ffprobe',optical_device(),media['main_title'],dvd.env())
+            streams=dvd_streaming.inspect(ROOT/'vendor/dvd/usr/bin/ffprobe',optical_device(),media['main_title'],dvd.env(),pass_fds=dvd.lease_fds())
             command=dvd_streaming.remux_command(ROOT/'vendor/dvd/usr/bin/ffmpeg',optical_device(),media['main_title'],streams)
-            child=subprocess.Popen(command,env=dvd.env(),stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
+            child=subprocess.Popen(command,env=dvd.env(),stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,pass_fds=dvd.lease_fds())
             dvd.attach_stream(token,child,media)
     except Exception:
         if child:dvd._stop(child)
@@ -536,59 +570,73 @@ def dvd_live_stream():
 
 @app.get('/api/status')
 def status():
-    with lock:
-        result = {'source': source, 'streaming_source': streaming_source, 'disc': copy.deepcopy(disc), 'player': {}, 'device': 'CDspeler', 'output': audio.snapshot()}
-        saved=archive.snapshot()
-        result['archive']=saved
-        if source == 'cd' and saved.get('drive_blocked'):result['error']=saved.get('error')
-        if saved.get('metadata') and saved['metadata'].get('release'):
-            result['disc'].update(saved['metadata'])
-        for track in result['disc'].get('tracks',[]):
-            remote=dict(saved.get('track_metadata',{}).get(track['number'],{}))
-            # The server may still describe the pre-lookup snapshot until a
-            # conversion/upload completes. Keep new names; use server durations
-            # and trim offsets independently of metadata readiness.
-            if track.get('title') and not re.fullmatch(r'(?:Track|Nummer)\s*\d+',track['title'],re.I):
-                remote.pop('title',None)
-            if track.get('artist') and track['artist'] not in ('Onbekende artiest','Album wordt opgezocht…'):
-                remote.pop('artist',None)
-            track.update(remote)
-            track.update(saved['states'].get(track['number'],{'ready':False,'storage':'pending'}))
-        result['disc']=disc_media.apply_text(result['disc'],disc.get('disc_media',{}))
-        if source == 'cd' and disc.get('scan_error'):result['error']=disc['scan_error']
-        if source == 'cd' and disc.get('autoplay_error'):
-            result['error'] = disc['autoplay_error']
-        if source == 'cd':
-            try:
-                if disc.get('present'):
-                    result['player'], result['queue'] = queue.observe(disc)
-                else:
-                    result['player'] = values(mpd('status')[0])
-                p = result['player']
-                # MPD enters play before the drive has delivered its first audio.
-                p['buffering'] = p.get('buffering') or p.get('state') == 'play' and (
-                    not p.get('audio') or float(p.get('elapsed', 0)) <= 0)
-                if result['player'].get('error'):
-                    result['error'] = 'De cd kon niet worden afgespeeld. Controleer de cd en probeer opnieuw.'
-            except Exception:
-                result['error'] = 'De cd-speler start nog op.'
-        elif source == 'dvd':
-            result['dvd'] = dvd.snapshot()
-            result['player'] = {'state': 'stop'}
-        elif source == 'vinyl':
-            result['vinyl'] = vinyl.snapshot()
-            result['output'] = result['vinyl']['monitor']
-            result['player'] = {'state': 'stop', 'volume': 100}
-        else:
-            result[source] = plexamp.snapshot() if source == 'plexamp' else spotify.snapshot()
-            sp = result[source]
-            result['player'] = {
-                'state': {'playing': 'play', 'paused': 'pause'}.get(sp['state'], 'stop'),
-                'volume': sp.get('volume', 50), 'elapsed': sp.get('elapsed', 0),
-                'buffering': sp['state'] == 'buffering',
-                'duration': sp.get('seconds', 0)}
-        return jsonify(result)
+    if not transition_lock.acquire(blocking=False):
+        with lock:
+            cached=copy.deepcopy(status_cache) if status_cache.get('source')==source else {'source':source,'streaming_source':streaming_source,'disc':copy.deepcopy(disc),'player':{'state':'stop','buffering':True},'output':audio.snapshot()}
+            cached['transition']=dict(transition)
+        return jsonify(cached)
+    try:
+        with lock:
+            current_source=source
+            current_streaming=streaming_source
+            current_disc=copy.deepcopy(disc)
+        return _status_snapshot(current_source,current_streaming,current_disc)
+    finally:transition_lock.release()
 
+def _status_snapshot(source,streaming_source,disc):
+    result = {'source': source, 'streaming_source': streaming_source, 'disc': copy.deepcopy(disc), 'player': {}, 'device': 'CDspeler', 'output': audio.snapshot(), 'transition':dict(transition)}
+    saved=archive.snapshot()
+    result['archive']=saved
+    if source == 'cd' and saved.get('drive_blocked'):result['error']=saved.get('error')
+    if saved.get('metadata') and saved['metadata'].get('release'):
+        result['disc'].update(saved['metadata'])
+    for track in result['disc'].get('tracks',[]):
+        remote=dict(saved.get('track_metadata',{}).get(track['number'],{}))
+        # The server may still describe the pre-lookup snapshot until a
+        # conversion/upload completes. Keep new names; use server durations
+        # and trim offsets independently of metadata readiness.
+        if track.get('title') and not re.fullmatch(r'(?:Track|Nummer)\s*\d+',track['title'],re.I):
+            remote.pop('title',None)
+        if track.get('artist') and track['artist'] not in ('Onbekende artiest','Album wordt opgezocht…'):
+            remote.pop('artist',None)
+        track.update(remote)
+        track.update(saved['states'].get(track['number'],{'ready':False,'storage':'pending'}))
+    result['disc']=disc_media.apply_text(result['disc'],disc.get('disc_media',{}))
+    if source == 'cd' and disc.get('scan_error'):result['error']=disc['scan_error']
+    if source == 'cd' and disc.get('autoplay_error'):
+        result['error'] = disc['autoplay_error']
+    if source == 'cd':
+        try:
+            if disc.get('present'):
+                result['player'], result['queue'] = queue.observe(disc)
+            else:
+                result['player'] = values(mpd('status')[0])
+            p = result['player']
+            # MPD enters play before the drive has delivered its first audio.
+            p['buffering'] = p.get('buffering') or p.get('state') == 'play' and (
+                not p.get('audio') or float(p.get('elapsed', 0)) <= 0)
+            if result['player'].get('error'):
+                result['error'] = 'De cd kon niet worden afgespeeld. Controleer de cd en probeer opnieuw.'
+        except Exception:
+            result['error'] = 'De cd-speler start nog op.'
+    elif source == 'dvd':
+        result['dvd'] = dvd.snapshot()
+        result['player'] = {'state': 'stop'}
+    elif source == 'vinyl':
+        result['vinyl'] = vinyl.snapshot()
+        result['output'] = result['vinyl']['monitor']
+        result['player'] = {'state': 'stop', 'volume': 100}
+    else:
+        result[source] = plexamp.snapshot() if source == 'plexamp' else spotify.snapshot()
+        sp = result[source]
+        result['player'] = {
+            'state': {'playing': 'play', 'paused': 'pause'}.get(sp['state'], 'stop'),
+            'volume': sp.get('volume', 50), 'elapsed': sp.get('elapsed', 0),
+            'buffering': sp['state'] == 'buffering',
+            'duration': sp.get('seconds', 0)}
+    with lock:
+        status_cache.clear();status_cache.update(copy.deepcopy(result))
+    return jsonify(result)
 
 @app.post('/api/action')
 def action():
@@ -597,7 +645,13 @@ def action():
         cmd = payload.get('action')
         if cmd == 'volume':
             raise ValueError('Het uitgangsvolume staat vast op 100%. Gebruik de versterker om het volume te regelen.')
-        with lock:
+        if cmd == 'source':
+            new=payload.get('source')
+            if new not in ('cd','spotify','plexamp','vinyl','dvd'):raise ValueError('Onbekende bron.')
+            choose_source(new)
+            return jsonify(ok=True)
+        with transition_lock:
+            if transition['active']:raise RuntimeError('Wacht tot de bronwissel klaar is.')
             if cmd == 'dvd-stop':
                 if source != 'dvd':raise ValueError('Kies eerst DVD.')
                 dvd.stop_stream()
@@ -605,12 +659,6 @@ def action():
             if cmd == 'archive-retry':
                 if source != 'cd':raise ValueError('Kies eerst CD.')
                 archive.retry_failed()
-                return jsonify(ok=True)
-            if cmd == 'source':
-                new = payload.get('source')
-                if new not in ('cd', 'spotify', 'plexamp', 'vinyl', 'dvd'):
-                    raise ValueError('Onbekende bron.')
-                choose_source(new)
                 return jsonify(ok=True)
             if cmd == 'eject':
                 if source == 'dvd':
@@ -620,7 +668,8 @@ def action():
                 if source == 'cd':
                     queue.last = None
                     mpd('stop', 'clear')
-                subprocess.run(['eject', optical_device()], check=True, timeout=12, capture_output=True)
+                with archive.optical.acquire() as lease:
+                    subprocess.run(['eject', optical_device()], check=True, timeout=12, capture_output=True,pass_fds=(lease.fileno(),))
                 return jsonify(ok=True)
             if cmd == 'release':
                 selected = payload.get('release')
@@ -629,7 +678,7 @@ def action():
                 cache = DATA / (disc['id'] + '.json')
                 data = json.loads(cache.read_text())
                 data['selected'] = selected
-                cache.write_text(json.dumps(data))
+                write_json(cache,data)
                 threading.Thread(target=enrich, args=(dict(disc),), daemon=True).start()
                 return jsonify(ok=True)
             if cmd in ('vinyl-recognize', 'vinyl-auto', 'vinyl-interval'):
@@ -685,18 +734,47 @@ def action():
         return jsonify(error=message), 400
 
 
+runtime_stop = threading.Event()
+runtime_threads = []
+runtime_lock = threading.Lock()
+
+def start_runtime():
+    global source
+    with runtime_lock:
+        if runtime_threads:return
+        runtime_stop.clear();archive.stopping.clear()
+        if source=='vinyl' and not vinyl.connected():source='cd'
+        choose_source(source)
+        workers=[archive.run,archive.upload_loop,archive.monitor,scan_loop,queue_loop,
+                 lambda: audio.observe(runtime_stop),lambda: vinyl.observe(runtime_stop),
+                 lambda: spotify.observe(runtime_stop),
+                 lambda: plexamp.observe(lambda:source=='plexamp',runtime_stop),
+                 lambda: plexamp.observe_metadata(runtime_stop),lambda: dvd.observe(runtime_stop)]
+        for worker in workers:
+            thread=threading.Thread(target=worker,daemon=True)
+            runtime_threads.append(thread);thread.start()
+
+def stop_runtime(timeout=8):
+    with runtime_lock:
+        runtime_stop.set();archive.stopping.set();archive.wake.set();archive.upload_wake.set();dvd.wake.set()
+        def cleanup():
+            try:archive.cancel()
+            finally:
+                try:dvd.stop_stream()
+                finally:vinyl.meter.close()
+        if runtime_threads:
+            cleanup_thread=threading.Thread(target=cleanup,daemon=True)
+            runtime_threads.append(cleanup_thread);cleanup_thread.start()
+        deadline=time.monotonic()+timeout
+        for thread in runtime_threads:thread.join(max(0,deadline-time.monotonic()))
+        runtime_threads[:]=[thread for thread in runtime_threads if thread.is_alive()]
+        return not runtime_threads
+
 if __name__ == '__main__':
-    if source == 'vinyl' and not vinyl.connected():
-        source = 'cd'
-    choose_source(source)
-    threading.Thread(target=archive.run, daemon=True).start()
-    threading.Thread(target=archive.upload_loop, daemon=True).start()
-    threading.Thread(target=archive.monitor, daemon=True).start()
-    threading.Thread(target=scan_loop, daemon=True).start()
-    threading.Thread(target=audio.observe, daemon=True).start()
-    threading.Thread(target=vinyl.observe, daemon=True).start()
-    threading.Thread(target=queue_loop, daemon=True).start()
-    threading.Thread(target=spotify.observe, daemon=True).start()
-    threading.Thread(target=plexamp.observe, args=(lambda: source == 'plexamp',), daemon=True).start()
-    threading.Thread(target=plexamp.observe_metadata, daemon=True).start()
-    app.run(host='0.0.0.0', port=8080, threaded=True, debug=False)
+    import signal
+    def terminate(signum,frame):raise SystemExit(0)
+    signal.signal(signal.SIGTERM,terminate)
+    try:
+        start_runtime()
+        app.run(host='0.0.0.0', port=8080, threaded=True, debug=False)
+    finally:stop_runtime()

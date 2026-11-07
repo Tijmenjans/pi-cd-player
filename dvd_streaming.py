@@ -15,8 +15,8 @@ def remux_command(binary,device,title,streams,output='pipe:1',seconds=None):
  if seconds is not None:cmd+=['-t',str(seconds)]
  return cmd+['-f','matroska','-cluster_time_limit','1000',str(output)]
 
-def inspect(binary,device,title,env):
+def inspect(binary,device,title,env,pass_fds=()):
  cmd=[str(binary),'-v','error','-f','dvdvideo','-title',str(title),'-i',str(device),'-show_entries','stream=index,codec_name,codec_type:stream_tags=language','-of','json']
- p=subprocess.run(cmd,env=env,capture_output=True,text=True,timeout=35)
+ p=subprocess.run(cmd,env=env,capture_output=True,text=True,timeout=35,pass_fds=pass_fds)
  if p.returncode:raise RuntimeError('De dvd-sporen konden niet worden gelezen')
  return json.loads(p.stdout)['streams']

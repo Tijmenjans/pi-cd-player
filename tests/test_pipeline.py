@@ -113,6 +113,7 @@ class PipelineTests(unittest.TestCase):
     def test_known_tracks_are_skipped_and_leftover_wav_is_cleaned(self):
         self.cloud.stored.add(1)
         old=self.a.stage/'TESTDISC1-1.wav';old.write_bytes(b'old confirmed upload')
+        self.a._register(self.disc,self.a.generation)
         self.assertTrue(self.a._produce_once())
         self.assertEqual(self.read,[2]);self.assertFalse(old.exists())
 

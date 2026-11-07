@@ -100,14 +100,14 @@ def read_cache(snapshot,directory):
     return None
 
 
-def cached_probe(snapshot,directory,device=None):
+def cached_probe(snapshot,directory,device=None,lease_fd=None):
     path=Path(directory)/(snapshot['id']+'-disc-media.json')
     cached=read_cache(snapshot,directory)
     if cached:return cached
     try:
         device=device or optical_device()
         run=subprocess.run([sys.executable,str(Path(__file__).resolve()),device],
-                           check=True,capture_output=True,text=True,timeout=45)
+                           check=True,capture_output=True,text=True,timeout=45,pass_fds=(() if lease_fd is None else (lease_fd,)))
         result=json.loads(run.stdout)
     except (OSError,ValueError,subprocess.SubprocessError):
         result={'version':VERSION,'cd_text':{'status':'unavailable','album':{},'tracks':{}},

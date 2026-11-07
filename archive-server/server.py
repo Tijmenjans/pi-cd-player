@@ -1,4 +1,5 @@
 """Private, resumable CD archive. Only complete, validated tracks become playable."""
+import itertools
 import hashlib
 import hmac
 import json
@@ -47,6 +48,10 @@ def initialize():
     with connect() as db:
         db.executescript('''
         PRAGMA journal_mode=WAL;
+        CREATE TABLE IF NOT EXISTS plex_refresh(id INTEGER PRIMARY KEY CHECK(id=1),
+          generation INTEGER NOT NULL DEFAULT 0, pending INTEGER NOT NULL DEFAULT 0,
+          attempts INTEGER NOT NULL DEFAULT 0, retry_at REAL NOT NULL DEFAULT 0, error TEXT);
+        INSERT OR IGNORE INTO plex_refresh(id) VALUES(1);
         CREATE TABLE IF NOT EXISTS discs(id TEXT PRIMARY KEY, manifest TEXT NOT NULL, updated REAL);
         CREATE TABLE IF NOT EXISTS tracks(disc TEXT, number INTEGER, raw TEXT, path TEXT,
           sha256 TEXT, version TEXT, error TEXT, PRIMARY KEY(disc,number));
@@ -170,7 +175,8 @@ def publishable(manifest,number):
     track=next(t for t in manifest['tracks'] if t['number']==number)
     album=str(manifest.get('title') or '').strip().casefold()
     title=str(track.get('title') or '').strip()
-    return (album not in ('','audio-cd','audio cd','onbekend album') and bool(title)
+    artist=str(track.get('artist') or manifest.get('artist') or '').strip().casefold()
+    return (artist not in ('','onbekende artiest','unknown artist','album wordt opgezocht…') and album not in ('','audio-cd','audio cd','onbekend album') and bool(title)
             and not re.fullmatch(r'(?:track|nummer)\s*\d+',title,re.I))
 
 
@@ -204,6 +210,75 @@ def refresh_plex():
     raise RuntimeError('De Plex-muziekbibliotheek ontbreekt')
 
 
+def schedule_plex_refresh():
+    # One durable, coalesced job. New requests cannot be cleared by an older refresh.
+    with connect() as db:
+        db.execute('UPDATE plex_refresh SET pending=1,generation=generation+1 WHERE id=1')
+
+
+def refresh_plex_once(now=None):
+    now=time.time() if now is None else now
+    with connect() as db:job=dict(db.execute('SELECT * FROM plex_refresh WHERE id=1').fetchone())
+    if not job['pending'] or job['retry_at']>now:return False
+    try:
+        refresh_plex()
+    except Exception as exc:
+        attempts=job['attempts']+1
+        with connect() as db:
+            db.execute('UPDATE plex_refresh SET attempts=?,retry_at=?,error=? WHERE id=1',
+                       (attempts,now+min(600,2**min(attempts,9)),type(exc).__name__))
+    else:
+        with connect() as db:
+            db.execute('UPDATE plex_refresh SET pending=0,attempts=0,retry_at=0,error=NULL WHERE id=1 AND generation=?',
+                       (job['generation'],))
+    return True
+
+
+def plex_refresh_loop():
+    while True:
+        try:refresh_plex_once()
+        except Exception:logging.exception('Plex-verversing tijdelijk niet beschikbaar')
+        time.sleep(1)
+
+
+def reconcile_raw(limit=1000,seconds=10):
+    """Recover validated owned WAVs after rename-before-commit crashes; never delete."""
+    raw=ROOT/'raw'
+    if not raw.is_dir() or raw.is_symlink():return 0
+    recovered=0;deadline=time.monotonic()+seconds
+    # Bounded scan; only exact own-layout paths, never symlinks or client paths.
+    for folder in itertools.islice(raw.iterdir(),limit):
+        if time.monotonic()>=deadline:break
+        if folder.is_symlink() or not folder.is_dir() or not ID.fullmatch(folder.name):continue
+        with connect() as db:
+            row=db.execute('SELECT manifest FROM discs WHERE id=?',(folder.name,)).fetchone()
+        if not row:continue
+        manifest=json.loads(row[0])
+        for track in manifest['tracks']:
+            if time.monotonic()>=deadline:return recovered
+            number=track['number'];path=folder/f'{number}.wav'
+            if path.is_symlink() or not path.is_file():continue
+            with LOCK,connect() as db:
+                existing=db.execute('SELECT raw,path FROM tracks WHERE disc=? AND number=?',(folder.name,number)).fetchone()
+                if existing and any(p and Path(p).is_file() for p in existing):continue
+                try:
+                    with wave.open(str(path),'rb') as wav:
+                        frames=track['sectors']*588
+                        if (wav.getnchannels(),wav.getsampwidth(),wav.getframerate(),wav.getnframes())!=(2,2,44100,frames):continue
+                        count=0
+                        while True:
+                            block=wav.readframes(65536)
+                            if not block:break
+                            count+=len(block)
+                        if count!=frames*4:continue
+                    with path.open('rb') as stream:digest=hashlib.file_digest(stream,'sha256').hexdigest()
+                except (OSError,EOFError,wave.Error):continue
+                db.execute('INSERT OR REPLACE INTO tracks(disc,number,raw,sha256) VALUES(?,?,?,?)',
+                           (folder.name,number,str(path),digest))
+            enqueue(folder.name,number);recovered+=1
+    return recovered
+
+
 def encode(disc, number):
     with LOCK, connect() as db:
         manifest = json.loads(db.execute('SELECT manifest FROM discs WHERE id=?', (disc,)).fetchone()[0])
@@ -214,7 +289,7 @@ def encode(disc, number):
     target = destination(manifest, number)
     if (row.get('version') == version and row.get('path') and Path(row['path'])==target
             and target.exists() and not needs_trim):
-        if target.is_relative_to(MUSIC):refresh_plex()
+        if target.is_relative_to(MUSIC):schedule_plex_refresh()
         with connect() as db:
             db.execute('UPDATE tracks SET error=NULL WHERE disc=? AND number=?',(disc,number))
         return True
@@ -279,7 +354,7 @@ def encode(disc, number):
             except OSError: pass
         if metadata_version(latest) != version:
             return False
-        if target.is_relative_to(MUSIC) or src.is_relative_to(MUSIC):refresh_plex()
+        if target.is_relative_to(MUSIC) or src.is_relative_to(MUSIC):schedule_plex_refresh()
         return True
     finally:
         temporary.unlink(missing_ok=True)
@@ -295,7 +370,7 @@ def conversion_loop():
             logging.exception('Archive conversion/Plex import failed: %s/%s', disc, number)
             with connect() as db:
                 db.execute('UPDATE tracks SET error=? WHERE disc=? AND number=?',
-                           ('Plex-import wordt opnieuw geprobeerd', disc, number))
+                           ('Audioverwerking mislukt; wordt opnieuw geprobeerd', disc, number))
             again = True
             time.sleep(5)
         finally:
@@ -448,8 +523,10 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
     if len(TOKEN) < 32: raise RuntimeError('Set a strong ARCHIVE_TOKEN')
     initialize()
+    reconcile_raw()
     with connect() as db:
         for r in db.execute('SELECT disc,number FROM tracks'):
             enqueue(*r)
     threading.Thread(target=conversion_loop, daemon=True).start()
+    threading.Thread(target=plex_refresh_loop, daemon=True).start()
     ThreadingHTTPServer(('0.0.0.0',8766), Handler).serve_forever()

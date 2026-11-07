@@ -1,3 +1,4 @@
+from state_store import write_json
 """Persistent logical CD queue, independent of which tracks have finished uploading."""
 import json
 import random
@@ -20,8 +21,7 @@ class ArchiveQueue:
         self.fades_configured=False
 
     def save(self):
-        temp=self.path.with_suffix('.tmp')
-        temp.write_text(json.dumps(self.data));temp.replace(self.path)
+        write_json(self.path,self.data,durable=True)
 
     def reset_engine(self):
         # MPD assigns fresh song ids after a service restart or source switch.

@@ -100,14 +100,14 @@ class APITests(unittest.TestCase):
         cd=SimpleNamespace(id='TESTDISC1',toc='TOC',first_track=1,track_lengths=[75]*4)
         media={'cd_text':{'status':'present','album':{'title':'CD album','artist':'CD artist'},
                          'tracks':{'1':{'title':'First song'}}}}
-        def probe(snapshot,directory):events.append('cdtext');return media
+        def probe(snapshot,directory,**kwargs):events.append('cdtext');return media
         def attach(snapshot,autoplay):
             events.append('attach')
             self.assertEqual(snapshot['title'],'CD album')
             self.assertEqual(snapshot['tracks'][0]['title'],'First song')
             self.assertEqual(snapshot['tracks'][0]['artist'],'CD artist')
             raise EndScan()
-        archive=Mock();archive.reading.return_value=False
+        archive=Mock();archive.optical=player.archive.optical;archive.reading.return_value=False
         archive.cancel.side_effect=lambda:events.append('cancel')
         with patch.object(player,'archive',archive),patch.object(player,'disc',{}), \
              patch.object(player,'media_changed',return_value=True), \
