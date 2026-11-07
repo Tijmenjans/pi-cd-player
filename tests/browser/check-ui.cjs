@@ -242,6 +242,68 @@ const cover =
         path: path.join(output, name + "-dark.png"),
         fullPage: true,
       });
+      if (width > 760) {
+        state = fixture("cd", false, true);
+        await page.evaluate(() => readStatus());
+        assert(await page.locator("#holiday-effects").isVisible());
+        assert.equal(
+          await page.locator("#holiday-effects").getAttribute("aria-pressed"),
+          "true",
+        );
+        assert.equal(
+          await page
+            .locator(".christmas-snow")
+            .evaluate((el) => getComputedStyle(el).display),
+          "none",
+          "Reduced motion must suppress snowfall",
+        );
+        await page.emulateMedia({ reducedMotion: "no-preference" });
+        assert.equal(
+          await page
+            .locator(".christmas-snow")
+            .evaluate((el) => getComputedStyle(el).display),
+          "block",
+        );
+        assert.equal(await page.locator(".christmas-snow i").count(), 16);
+        assert.equal(
+          await page
+            .locator(".christmas-hearth")
+            .evaluate((el) => getComputedStyle(el).pointerEvents),
+          "none",
+        );
+        await page.screenshot({
+          path: path.join(output, name + "-christmas.png"),
+          fullPage: true,
+        });
+        await page.locator("#holiday-effects").click();
+        assert.equal(
+          await page.locator("html").getAttribute("data-holiday-effects"),
+          "off",
+        );
+        assert.equal(
+          await page
+            .locator(".christmas-snow")
+            .evaluate((el) => getComputedStyle(el).display),
+          "none",
+        );
+        await page.reload();
+        await page.locator(".track-row").first().waitFor();
+        assert.equal(
+          await page.locator("html").getAttribute("data-holiday-effects"),
+          "off",
+          "Holiday preference must persist",
+        );
+        await page.locator("#holiday-effects").click();
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForFunction(
+          () => document.documentElement.dataset.theme === "dark",
+        );
+        assert.equal(await page.locator("#holiday-effects").isVisible(), false);
+        assert.equal(
+          await page.locator(".christmas-hearth").isVisible(),
+          false,
+        );
+      }
       await context.close();
     }
     assert.deepEqual(failures, []);

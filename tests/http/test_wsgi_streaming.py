@@ -67,4 +67,42 @@ class StreamingTests(unittest.TestCase):
                 with patch.object(app,'archive',Store()):self.with_server(app.app,check)
             finally:live.close()
 
+
+    def test_static_deployment_does_not_interrupt_open_stream(self):
+        import json,os
+        from types import SimpleNamespace
+        from test_deployment import bundle,remote
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);(root/'static').mkdir()
+            original=bundle('a'*40,{'app.py':b'pass\n','static/app.js':b'// original\n'})
+            target=bundle('b'*40,{'app.py':b'pass\n','static/app.js':b'// Christmas\n'})
+            for name,data in remote.validate_bundle(original)[1].items():(root/name).write_bytes(data)
+            (root/'release.json').write_text(json.dumps(original['manifest']))
+            release=threading.Event();application=Flask(__name__)
+            @application.get('/stream')
+            def stream():
+                def chunks():yield b'first';release.wait(5);yield b'last'
+                return Response(chunks(),mimetype='audio/wav')
+            @application.get('/version')
+            def version():return json.loads((root/'release.json').read_text())
+            def check(port):
+                def refuse(*args):raise AssertionError('Runtime/MPD/service access forbidden')
+                def healthy(manifest):
+                    connection=http.client.HTTPConnection('127.0.0.1',port,timeout=2)
+                    try:
+                        connection.request('GET','/version');row=json.loads(connection.getresponse().read())
+                        self.assertEqual(row['commit'],manifest['commit'])
+                    finally:connection.close()
+                system=SimpleNamespace(verify_identity=lambda root:None,web_pid=lambda:str(os.getpid()),healthy=healthy,
+                                       service=refuse,mpd=refuse,status=refuse)
+                connection=http.client.HTTPConnection('127.0.0.1',port,timeout=3)
+                try:
+                    connection.request('GET','/stream');response=connection.getresponse()
+                    self.assertEqual(response.read(5),b'first')
+                    result=remote.dispatch({'action':'assets','bundle':target},system,root)
+                    self.assertTrue(result['web_pid_unchanged']);self.assertFalse(release.is_set())
+                    release.set();self.assertEqual(response.read(),b'last')
+                finally:release.set();connection.close()
+            self.with_server(application,check)
+
 if __name__=='__main__':unittest.main()

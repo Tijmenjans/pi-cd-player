@@ -210,6 +210,10 @@ class System:
         subprocess.run(['systemctl', '--user', action, 'cdspeler-web'], check=True,
                        capture_output=True, timeout=35)
 
+    def web_pid(self):
+        return subprocess.check_output(['systemctl', '--user', 'show', 'cdspeler-web',
+                                        '-p', 'MainPID', '--value'], timeout=5).strip()
+
     def pid(self):
         return subprocess.check_output(['systemctl', '--user', 'show', 'cdspeler-mpd',
                                         '-p', 'MainPID', '--value'], timeout=5).strip()
@@ -312,6 +316,55 @@ def restore(root, backup, info):
         else:
             atomic_write(dest, (backup / 'code' / name).read_bytes(), expected['mode'])
     verify(root, info['previous'])
+
+
+def assets_transaction(root, manifest, content, system):
+    """Static-only update: no status/MPD/optical calls, no service stop/start."""
+    system.verify_identity(root)
+    old=installed(root)
+    require(old is not None,'Static updates require an installed release')
+    require(set(old['files'])==set(manifest['files']),'Static updates cannot add/remove paths')
+    changed={name for name,entry in manifest['files'].items() if old['files'][name]!=entry}
+    require(bool(changed) and all(name.startswith('static/') for name in changed),
+            'Only existing static files may change; runtime changes require normal apply')
+    verify(root,old['files'])
+    pid=system.web_pid();require(pid not in (b'',b'0','','0'),'Unknown web process')
+    system.healthy(old)
+    backups=root/'backups';require(not backups.is_symlink(),'Symlink backup directory')
+    backups.mkdir(mode=0o700,exist_ok=True)
+    backup=Path(tempfile.mkdtemp(prefix='deploy-',dir=backups));backup.chmod(0o700)
+    previous={name:record(safe_path(root,name)) for name in list(manifest['files'])+['release.json']}
+    info={'schema':1,'mode':'assets','previous':previous,'installed':manifest,'old_manifest':old}
+    for name,entry in previous.items():
+        dest=backup/'code'/name;dest.parent.mkdir(parents=True,exist_ok=True)
+        shutil.copy2(safe_path(root,name),dest)
+        require(record(dest)==entry,'Static backup verification failed')
+    atomic_write(backup/'backup.json',json.dumps(info).encode(),0o600)
+    require(json.loads((backup/'backup.json').read_text())==info,'Static backup metadata mismatch')
+    with tempfile.TemporaryDirectory(prefix='.deploy-assets-',dir=root) as staging:
+        stage=Path(staging)
+        for name in changed:atomic_write(stage/name,content[name],manifest['files'][name]['mode'])
+        verify(stage,{name:manifest['files'][name] for name in changed})
+        verify(root,old['files']);require(installed(root)==old,'Release changed during staging')
+        require(system.web_pid()==pid,'Web process changed during staging')
+        try:
+            for name in sorted(changed):atomic_write(safe_path(root,name),(stage/name).read_bytes(),manifest['files'][name]['mode'])
+            atomic_write(root/'release.json',json.dumps(manifest).encode(),0o644)
+            verify(root,manifest['files']);system.healthy(manifest);system.verify_identity(root)
+            require(system.web_pid()==pid,'Web process changed during static update')
+        except BaseException:
+            try:
+                # Restore only the assets and marker; never touch loaded modules.
+                for name in sorted(changed|{'release.json'}):
+                    require(record(backup/'code'/name)==previous[name],'Static recovery backup corrupt')
+                for name in sorted(changed|{'release.json'}):
+                    atomic_write(safe_path(root,name),(backup/'code'/name).read_bytes(),previous[name]['mode'])
+                verify(root,old['files']);system.healthy(old)
+            except BaseException:
+                raise Refused('Static recovery failed. Safety backup ID: '+backup.name) from None
+            raise Refused('Static update failed; previous assets restored. Safety backup ID: '+backup.name) from None
+    return {'ok':True,'mode':'assets','commit':manifest['commit'],'backup_id':backup.name,
+            'web_pid_unchanged':True,'services_restarted':False,'changed':sorted(changed)}
 
 
 def transaction(root, manifest, content, system, baseline=None):
@@ -479,7 +532,7 @@ def dispatch(request, system=None, root=ROOT):
         except Exception:identity=False
         return {'ok': True, 'release': installed(root),'identity_matches':identity,
                 'safe': identity and inspect_safe(system)}
-    require(action in ('apply', 'rollback'), 'Invalid action')
+    require(action in ('apply', 'assets', 'rollback'), 'Invalid action')
     # Only mutation paths create a lock. A plan/inspect never writes remotely.
     import fcntl
     require(not root.is_symlink(), 'Symlink root')
@@ -494,6 +547,7 @@ def dispatch(request, system=None, root=ROOT):
         if action == 'rollback':
             return rollback(root, request['backup_id'], system)
         manifest, content = validate_bundle(request['bundle'])
+        if action == 'assets':return assets_transaction(root, manifest, content, system)
         return transaction(root, manifest, content, system, request.get('baseline'))
 
 

@@ -93,17 +93,17 @@ def remote(root, request):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', nargs='?', choices=('plan', 'apply', 'rollback', 'inspect'), default='plan')
+    parser.add_argument('command', nargs='?', choices=('plan', 'apply', 'assets', 'rollback', 'inspect'), default='plan')
     parser.add_argument('--root',default='/home/tijmen/cdspeler',help='Explicit remote installation root')
     parser.add_argument('--commit', default='HEAD', help='Git commit/tag to package')
     parser.add_argument('--baseline-commit', help='Explicit reviewed installed baseline; first Pi installation: ' + HISTORICAL)
-    parser.add_argument('--apply', action='store_true', help='Permit remote writes (apply or rollback only)')
+    parser.add_argument('--apply', action='store_true', help='Permit remote writes (apply, assets or rollback only)')
     parser.add_argument('--backup-id', help='Exact private backup ID for rollback')
     parser.add_argument('--dry-run', action='store_true', help='Local read-only plan, never remote writes')
     args = parser.parse_args(argv)
     try:
         require(not (args.apply and args.dry_run), 'Choose --apply or --dry-run')
-        require(not args.apply or args.command in ('apply', 'rollback'), '--apply needs apply/rollback command')
+        require(not args.apply or args.command in ('apply', 'assets', 'rollback'), '--apply needs apply/assets/rollback command')
         if args.command == 'inspect':
             require(not args.dry_run, 'Use plan for an offline dry run')
             print(json.dumps(remote(ROOT, {'action': 'inspect','root':args.root}), indent=2)); return 0
@@ -115,8 +115,8 @@ def main(argv=None):
             print(json.dumps(remote(ROOT, {'action': 'rollback', 'backup_id': args.backup_id,'root':args.root}), indent=2)); return 0
         require(args.backup_id is None, '--backup-id is only for rollback')
         bundle, baseline = build(ROOT, args.commit, args.baseline_commit)
-        if args.command == 'apply' and args.apply:
-            result = remote(ROOT, {'action': 'apply', 'bundle': bundle, 'baseline': baseline,'root':args.root})
+        if args.command in ('apply','assets') and args.apply:
+            result = remote(ROOT, {'action': args.command, 'bundle': bundle, 'baseline': baseline,'root':args.root})
         else:
             result = {'action': 'plan', 'remote_writes': False, 'remote_contact': False,
                       'root':args.root,'manifest': bundle['manifest'], 'baseline_provided': baseline is not None,

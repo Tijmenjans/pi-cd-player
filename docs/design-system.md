@@ -44,3 +44,11 @@ Gebruik een eigen geïnstalleerde Chromium-browser via BROWSER_EXECUTABLE of de 
 Fysieke eject, een echte nieuwe cd-invoer, langdurig afspelen, Bluetooth en DVD op Apple TV vereisen afzonderlijke praktijkcontrole. Een browser-/unittestuitslag bewijst die niet.
 
 Terugrollen naar een versie van vóór cd_session.py is tijdens een uitgeworpen albumsessie bewust geweigerd: die oudere code kent alleen fysieke aanwezigheid. Gebruik een sessiecompatibele versie, of plan afzonderlijk herstel nadat het album is afgelopen en de fysieke media-/sessietoestand bewust is afgehandeld. Er wordt nooit automatisch muziek gestart, gestopt of een cd opnieuw geplaatst om rollback mogelijk te maken.
+
+## Kersteditie
+
+De kerstmodus op grote schermen combineert dennengroen, bordeaux, champagnegoud en warm gebroken wit. De bestaande haardfoto blijft zichtbaar achter een matte laag; album- en trackpanelen hebben voldoende dekking voor rustige tekst. Een gouden afspeelknop, fijne randen en een kleine groet maken het geheel feestelijk zonder technische decoratie.
+
+Kerstgimmicks: warme lichtjes bovenaan, zestien langzaam vallende sneeuwvlokjes en “Een plaatje bij de haard.” De sterknop schakelt lichtjes en sneeuw gezamenlijk aan/uit; de voorkeur wordt lokaal bewaard en tussen tabbladen bijgewerkt. Er is geen geluidseffect en de decoratie vangt geen klikken. Sneeuw gebruikt alleen CSS-transform/opacity, geen JavaScript-lus; bij prefers-reduced-motion valt de sneeuw volledig weg. Op telefoons blijft donkere modus gewoon donker.
+
+De browsercontrole test de kerstknop, opgeslagen effectvoorkeur, zestien vlokken, minder beweging, doorklikbare decoratie en terugschakelen naar mobiel donker. Screenshots gebruiken fictieve media. Alleen de static-bestanden worden via tools/deploy assets bijgewerkt; daarvoor hoeven webservice en MPD niet te herstarten.

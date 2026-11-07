@@ -96,6 +96,66 @@ class Transactions(unittest.TestCase):
         self.assertNotIn('stop',self.system.calls)
         self.assertEqual(remote.installed(self.root),candidate['manifest'])
 
+    def asset_bundle(self):
+        return bundle(names={'app.py':b'# original\n','static/app.js':b'// Christmas assets\n'})
+
+    def assets(self,b=None):
+        self.system.web_pid=lambda:b'456'
+        return remote.dispatch({'action':'assets','bundle':b or self.asset_bundle()},self.system,self.root)
+
+    def test_static_update_preserves_active_runtime_without_mpd_or_status_calls(self):
+        self.system=Fake('play')
+        self.system.mpd=lambda command: (_ for _ in ()).throw(AssertionError('MPD must not be contacted'))
+        self.system.status=lambda: (_ for _ in ()).throw(AssertionError('Hardware status must not be queried'))
+        result=self.assets()
+        self.assertTrue(result['web_pid_unchanged']);self.assertFalse(result['services_restarted'])
+        self.assertEqual(result['changed'],['static/app.js'])
+        self.assertEqual(self.system.calls,['health','health'])
+        self.assertEqual(remote.installed(self.root),self.asset_bundle()['manifest'])
+        self.assertEqual((self.root/'app.py').read_bytes(),b'# original\n')
+
+    def test_static_update_refuses_runtime_changes_and_new_paths(self):
+        for candidate in (bundle(),bundle(names={'app.py':b'# original\n','static/app.js':b'// next\n','static/new.css':b'body{}'})):
+            with self.subTest(candidate=candidate):
+                with self.assertRaises(remote.Refused):self.assets(candidate)
+                self.assertNotIn('stop',self.system.calls)
+        self.assertFalse((self.root/'backups').exists())
+
+    def test_static_update_refuses_unmarked_or_drifted_installation(self):
+        (self.root/'static/app.js').write_text('// drift')
+        with self.assertRaises(remote.Refused):self.assets()
+        self.assertNotIn('stop',self.system.calls)
+        (self.root/'release.json').unlink()
+        with self.assertRaises(remote.Refused):self.assets()
+
+    def test_static_failed_verification_restores_assets_without_restart(self):
+        original=self.system.healthy;calls=[0]
+        def healthy(manifest):
+            calls[0]+=1
+            if calls[0]==2:raise OSError('synthetic health failure')
+            return original(manifest)
+        self.system.healthy=healthy
+        with self.assertRaisesRegex(remote.Refused,'previous assets restored'):self.assets()
+        self.assertEqual(remote.installed(self.root),self.initial['manifest'])
+        self.assertEqual((self.root/'static/app.js').read_bytes(),b'// original\n')
+        self.assertNotIn('stop',self.system.calls);self.assertNotIn('start',self.system.calls)
+
+    def test_static_partial_write_failure_restores_both_files_and_marker(self):
+        real=remote.atomic_write;failed=[False]
+        def write(path,data,mode):
+            if path==self.root/'release.json' and not failed[0]:failed[0]=True;raise OSError('disk full')
+            return real(path,data,mode)
+        with patch.object(remote,'atomic_write',side_effect=write):
+            with self.assertRaisesRegex(remote.Refused,'previous assets restored'):self.assets()
+        self.assertEqual(remote.installed(self.root),self.initial['manifest'])
+        self.assertEqual((self.root/'static/app.js').read_bytes(),b'// original\n')
+        self.assertNotIn('stop',self.system.calls)
+
+    def test_static_backup_can_use_existing_safe_rollback(self):
+        result=self.assets()
+        remote.dispatch({'action':'rollback','backup_id':result['backup_id']},self.system,self.root)
+        self.assertEqual(remote.installed(self.root),self.initial['manifest'])
+
     def test_idle_empty_disc(self):
         self.system = Fake('stop')
         self.system.status_value['archive'].update(stored=0, total=0, states={})

@@ -35,19 +35,19 @@
 }
 :root[data-theme="christmas"] {
   color-scheme: dark;
-  --bg: #241619;
-  --panel: #2e1d21ed;
-  --surface: #40272c;
-  --ink: #fff1dc;
-  --muted: #d7bfb5;
-  --line: #694349;
-  --accent: #e9c18a;
-  --accent-ink: #322024;
-  --active: #63303a;
-  --online: #b6cc9e;
-  --warning: #ffb4a0;
-  --art-line: #ad8874;
-  --focus: #f6d49f;
+  --bg: #14251f;
+  --panel: #291c20f5;
+  --surface: #3c272b;
+  --ink: #fff2dc;
+  --muted: #d6c0ae;
+  --line: #705347;
+  --accent: #e7bd78;
+  --accent-ink: #302017;
+  --active: #603039;
+  --online: #b9d0a2;
+  --warning: #ffc0a7;
+  --art-line: #b99a78;
+  --focus: #ffe0a8;
 }
 * {
   box-sizing: border-box;
@@ -1153,5 +1153,183 @@ body[data-source="spotify"] .now-artist {
   .player {
     position: sticky;
     top: 24px;
+  }
+}
+
+/* Christmas: evergreen, candlelight and burgundy; decorative layers never capture input. */
+.holiday-toggle,
+.season-greeting {
+  display: none;
+}
+:root[data-theme="christmas"] .holiday-toggle {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--accent);
+}
+:root[data-theme="christmas"] .holiday-toggle[aria-pressed="true"] {
+  background: #e7bd7817;
+  box-shadow: inset 0 0 0 1px #e7bd7850;
+}
+:root[data-theme="christmas"] .season-greeting {
+  display: block;
+  margin-left: auto;
+  color: #ead1a4;
+  font:
+    italic 16px/1.5 Georgia,
+    serif;
+}
+:root[data-theme="christmas"] .wordmark {
+  color: #fff2dc;
+}
+:root[data-theme="christmas"] .brand-dot {
+  background: var(--accent);
+  box-shadow: 0 0 16px #edba6e88;
+}
+:root[data-theme="christmas"] .panel {
+  border-color: #caa66c55;
+  box-shadow:
+    0 16px 50px #080e0b40,
+    inset 0 1px #ffe4b51c;
+}
+:root[data-theme="christmas"] .player {
+  background: linear-gradient(145deg, #42232af5, #281d22f5 62%);
+  border-top: 2px solid #cda66b;
+}
+:root[data-theme="christmas"] .track-section,
+:root[data-theme="christmas"] .source-guide {
+  background: linear-gradient(155deg, #21352df5, #182921f5);
+  border-top: 2px solid #a88c56;
+}
+:root[data-theme="christmas"] .eyebrow,
+:root[data-theme="christmas"] .source-label {
+  color: #dec28f;
+}
+:root[data-theme="christmas"] .album-name {
+  color: #fff1d4;
+  text-shadow: 0 2px 18px #edac4c12;
+}
+:root[data-theme="christmas"] .artwork {
+  box-shadow:
+    0 14px 34px #0b080950,
+    0 0 0 1px #e5ba742b;
+}
+:root[data-theme="christmas"] .art-placeholder {
+  background: radial-gradient(ellipse at 40% 20%, #5b3c31, #35252a);
+}
+:root[data-theme="christmas"] .sources button.selected {
+  background: linear-gradient(135deg, #77313e, #552931);
+  color: #ffebc4;
+  box-shadow:
+    inset 0 0 0 1px #d3ab6a77,
+    0 3px 12px #0002;
+}
+:root[data-theme="christmas"] .play-button {
+  background: linear-gradient(135deg, #f5d394, #d3a35b);
+  color: #35251d;
+  box-shadow:
+    0 0 0 5px #e7bd780a,
+    0 5px 20px #070b0955,
+    inset 0 1px #fff0cd;
+}
+:root[data-theme="christmas"] .track-row.active {
+  background: linear-gradient(100deg, #65323c, #442a30);
+  box-shadow: inset 3px 0 #edc680;
+}
+:root[data-theme="christmas"] .track-row:hover {
+  background-color: #c4aa7112;
+}
+:root[data-theme="christmas"] .track-row {
+  border-bottom-color: #c9aa6d25;
+}
+:root[data-theme="christmas"] .hearth-photo {
+  opacity: 0.9;
+  background-position: center 72%;
+}
+:root[data-theme="christmas"] .hearth-matte {
+  background:
+    radial-gradient(ellipse at 50% 110%, #8f451b12, transparent 65%),
+    linear-gradient(180deg, #10221ee8, #17271dd9 32%, #25191cb8 68%, #24151380);
+}
+.christmas-lights {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  opacity: 0.7;
+  background:
+    radial-gradient(
+        ellipse at 19px 12px,
+        #fff2ba 0 2px,
+        #f5b35480 3px,
+        #f5b35412 10px,
+        transparent 21px
+      )
+      0 0/116px 64px repeat-x,
+    radial-gradient(
+        ellipse at 77px 22px,
+        #f7d892 0 2px,
+        #f5b35455 3px,
+        #f5b35408 12px,
+        transparent 23px
+      )
+      0 0/116px 64px repeat-x;
+}
+.christmas-snow {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0.44;
+  display: none;
+}
+.christmas-snow i {
+  position: absolute;
+  left: var(--x);
+  top: -15px;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: #fff6df;
+  animation: holiday-snow var(--fall) var(--delay) linear infinite;
+  will-change: transform;
+}
+:root[data-holiday-effects="on"] .christmas-snow {
+  display: block;
+}
+:root[data-holiday-effects="off"] .christmas-lights {
+  display: none;
+}
+@keyframes holiday-snow {
+  from {
+    transform: translate3d(-12px, -20px, 0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+  }
+  90% {
+    opacity: 0.6;
+  }
+  to {
+    transform: translate3d(28px, 110vh, 0);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .christmas-snow {
+    display: none !important;
+  }
+  .christmas-snow i {
+    will-change: auto;
+  }
+}
+@media (max-width: 760px) {
+  .season-greeting,
+  .holiday-toggle {
+    display: none !important;
   }
 }

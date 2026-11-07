@@ -4,8 +4,11 @@ const themes = ["light", "dark", "christmas"];
 const tvLayout = window.matchMedia?.("(min-width: 761px)");
 const systemTheme = window.matchMedia?.("(prefers-color-scheme: dark)");
 let themePreference = null;
+const holidayKey = "cdspeler-holiday-effects";
+let holidayEffects = true;
 try {
   themePreference = localStorage.getItem(themeKey);
+  holidayEffects = localStorage.getItem(holidayKey) !== "off";
 } catch (_) {}
 if (!themes.includes(themePreference)) themePreference = null;
 
@@ -15,7 +18,18 @@ function applyTheme() {
   const dark = preference === "dark" || preference === "christmas";
   const theme = dark ? (tvLayout?.matches ? "christmas" : "dark") : "light";
   document.documentElement.dataset.theme = theme;
-  const colors = { light: "#f1f0ec", dark: "#181816", christmas: "#241619" };
+  document.documentElement.dataset.holidayEffects =
+    theme === "christmas" && holidayEffects ? "on" : "off";
+  const effectsButton = document.getElementById("holiday-effects");
+  if (effectsButton) {
+    effectsButton.setAttribute("aria-pressed", String(holidayEffects));
+    const effectsLabel = holidayEffects
+      ? "Kersteffecten uitzetten"
+      : "Kersteffecten aanzetten";
+    effectsButton.setAttribute("aria-label", effectsLabel);
+    effectsButton.title = effectsLabel;
+  }
+  const colors = { light: "#f1f0ec", dark: "#181816", christmas: "#14251f" };
   document
     .querySelector('meta[name="theme-color"]')
     ?.setAttribute("content", colors[theme]);
@@ -44,9 +58,20 @@ document.addEventListener("DOMContentLoaded", applyTheme);
 systemTheme?.addEventListener("change", () => {
   if (!themePreference) applyTheme();
 });
+function toggleHolidayEffects() {
+  holidayEffects = !holidayEffects;
+  try {
+    localStorage.setItem(holidayKey, holidayEffects ? "on" : "off");
+  } catch (_) {}
+  applyTheme();
+}
 window.addEventListener("storage", (event) => {
-  if (event.key !== themeKey && event.key !== null) return;
-  themePreference = themes.includes(event.newValue) ? event.newValue : null;
+  if (event.key !== themeKey && event.key !== holidayKey && event.key !== null)
+    return;
+  if (event.key === themeKey || event.key === null)
+    themePreference = themes.includes(event.newValue) ? event.newValue : null;
+  if (event.key === holidayKey || event.key === null)
+    holidayEffects = event.newValue !== "off";
   applyTheme();
 });
 

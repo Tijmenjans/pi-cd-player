@@ -59,3 +59,16 @@ Een veiligheidsbackup na terugzetten naar een historische installatie zonder rel
 `python3 tools/paused_handoff.py` toont alleen een plan. De expliciete `--apply`-route neemt de exclusieve onderhoudslease, verifieert de bestaande installatie, vereist een volledig opgeslagen album en pauzestand, controleert de servertrack met HEAD en bewaart een privé-checkpoint onder backups/paused-handoff-*. De overname vervangt uitsluitend de huidige lokale MPD-entry door dezelfde servertrack via seekid op dezelfde positie. De volgende entries en consume-instelling blijven behouden. Geen play, stop, clear, speakerverbinding of serviceherstart. Bij fouten wordt de oorspronkelijke gepauzeerde URI hersteld; ook verloren add-/delete-bevestigingen moeten worden afgehandeld. Dit is een afzonderlijke onderhoudsactie; gewone playback blijft de lokale bron tot trackeinde pinnen.
 
 Gebruik dit alleen na een geslaagde geïsoleerde native MPD-proef voor de geïnstalleerde MPD-versie. De standaard deploymenttool blijft lokale pauzetokens weigeren; de aparte overname moet eerst aantoonbaar slagen. Alleen daarna volgt een gewone apply met ongewijzigde veiligheidscontroles.
+
+### Alleen bestaande statische bestanden bijwerken, zonder herstart
+
+```sh
+./tools/deploy assets --commit HEAD --dry-run
+./tools/deploy assets --commit HEAD --apply
+```
+
+Deze afzonderlijke route is bedoeld voor vormgeving tijdens actieve weergave/imports. Hij neemt dezelfde onderhoudslease en vereist een gezonde, geïdentificeerde bestaande installatie. Alle geïnstalleerde bestandshashes moeten kloppen, het bestandenset blijft exact gelijk en uitsluitend bestaande static/-bestanden mogen andere inhoud/modi krijgen. Iedere Python-/runtimewijziging, nieuw of verdwenen pad wordt geweigerd en moet via normale apply met veilige spelerstatus.
+
+Assets worden vooraf gestaged en geverifieerd, het volledige vorige code-/releasecheckpoint wordt privé bewaard, bestanden worden atomisch vervangen en release.json wordt bijgewerkt. Web-PID, identiteit, volledige bestandshashes en health/ready/version worden daarna gecontroleerd. Er wordt geen /api/status, MPD, reader of systeemservice aangeroepen; de webservice wordt niet gestopt of gestart. Een fout herstelt uitsluitend gewijzigde assets en de marker, zonder herstart. De backup kan later tijdens een vrij onderhoudsmoment via de gewone veilige rollback worden teruggezet; die normale rollback blijft een afzonderlijke, conservatieve route.
+
+Een open synthetische HTTP-stream is in de echte loopback-test door een assets-update heen blijven lezen. De offline transactietests controleren ook geweigerde runtimewijzigingen, drift, gedeeltelijke schrijffouten en herstel zonder serviceopdrachten. De normale apply/rollback-grenzen zijn niet versoepeld. Een reeds geopende browser krijgt de nieuwe assets bij verversen; bestaande audiostreams blijven open.
