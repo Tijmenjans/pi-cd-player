@@ -1,9 +1,10 @@
+from runtime_settings import Settings
 """Reconnect the paired IKEA speaker and keep it the default audio output."""
 import json
 import subprocess
 import time
 
-ADDRESS = '6C:5C:3D:3C:2B:A3'
+ADDRESS = Settings.load().speaker_address
 
 def main():
     info = subprocess.run(['bluetoothctl', 'info', ADDRESS], capture_output=True, text=True, timeout=5)

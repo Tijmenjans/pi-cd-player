@@ -1,0 +1,4 @@
+#!/bin/bash
+set -euo pipefail
+project_root="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+exec "${PYTHON:-python3}" "$project_root/tools/setup_environment.py" "$@"

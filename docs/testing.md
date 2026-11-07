@@ -1,19 +1,28 @@
 # Verificatie
 
-Offline: `.venv/bin/python tools/run_tests.py` en `node tests/test_frontend.cjs`. De runner gebruikt een tijdelijke broncodekopie, fictieve archiefconfiguratie en expliciete libdiscid-simulatie. Hij start geen Flask-server of productieworkers. Veel tests gebruiken mocks voor MPD, netwerk, drive en systemd; proces-/flock-tests starten wel kleine echte lokale childprocessen. De frontendtests gebruiken een beperkte DOM-simulatie, geen echte browser of visuele schermcontrole.
+## Onderhouden controles
 
-Bewaarde regressies omvatten lokale-track-pinning, opvolgende bronkeuze, seekherstel, stall/deadline/reader-lock, drie pogingen en trackprioriteit, uploadbackoff/verloren bevestiging, volledige versus afgebroken WAV, CD-Text/TOC, DVD-exclusiviteit/ondertitels, vinyltransities en verouderde bronstatus.
+`make check` voert de audit van Git-indexblobs, syntaxiscontroles, offline Python-tests en frontendtests uit. `make check-http` test echte loopback-HTTP via Waitress met synthetische media, zonder hardwareworkers. GitHub Actions gebruikt Python 3.13/3.14 en Node 22 met dezelfde controles.
 
-`tests/integration/test_live_mpd.py` en `test_fades_mpd.py` vereisen echte MPD met null/recorder-output en loopback HTTP. Ze gebruiken synthetische audio en eigen poorten; ze zitten buiten de standaard discovery. Voer ze uitsluitend in een geschikte testomgeving uit met `PYTHONPATH=.:tests python3 -m unittest discover -s tests/integration`. Ze testen geen echte USB-drive of Bluetooth. Tijdens deze migratie zijn ze niet uitgevoerd.
+De gewone vormen werken beide:
 
-Echte hardwarecontroles blijven afzonderlijk: langlopende cd-import, USB-resets en kernelhangs, hoorbare bronwissels/Bluetooth, VLC op Apple TV en Nederlandse ondertitels, fysieke eject en gelijktijdigheid. Historische gebruikersbevestigingen staan in historical-delivery.md; ze zijn niet opnieuw uitgevoerd. Offline succes bewijst deze hardware-eigenschappen niet.
+```sh
+.venv/bin/python -m unittest discover -s tests -t .
+.venv/bin/python -m unittest discover -s tests
+```
 
-Resultaat op 7 november 2026, Mac/Python 3.14: 125 offline Python-tests geslaagd; frontendcontroles voor CD/Vinyl/streaming/DVD, herstelmelding en bronrace geslaagd. Native python-libdiscid kon op de Mac niet bouwen wegens ontbrekende discid/discid.h; de offline stub is expliciet, productie gebruikt de echte Pi-bibliotheek. Geen MPD-integratie- of hardwaretests uitgevoerd.
+`tools/run_tests.py` is een compatibiliteitswrapper. tests/__init__.py maakt tijdelijke runtime-state en fictieve archiefconfiguratie. App-importerende tests laden die bootstrap ook bij korte discovery. optical_disc en de device-provider zijn expliciet geïnjecteerd; sys.modules wordt niet vervangen en er wordt geen broncodekopie gemaakt. Sentineltests controleren in aparte processen dat bestaande runtimegegevens bij beide discoveryvormen onaangeroerd blijven.
 
-De verbeteringsronde voegt tests toe voor offline WAV-hergebruik, begrensde buffer, opslag-/metricsfouten, gedeelde CD/DVD-leases, herstel na stop-/MPD-/schrijffouten, responsieve status tijdens bronwissel, import zonder workers, idempotente runtime-start/stop, catalogusisolatie en Discogs-TOC-behoud. VPS-tests gebruiken tijdelijke SQLite/WAV-bestanden en gesimuleerde Plex-aanroepen: persistente retry/backoff, gelijktijdige refreshverzoeken, gereed FLAC zonder Plex-wachttijd, weesherstel en gecontroleerde artwork-cache.
+Veel tests gebruiken mocks voor netwerk, systemd en drive; proces-/flock-tests starten wel kleine echte lokale childprocessen. Frontendtests gebruiken een beperkte DOM-simulatie, geen echte browser of visuele controle. De deploytests gebruiken tijdelijke bestanden en nep-services: ze bewijzen rollbacklogica, geen hoorbaar pauzebehoud bij een echte herstart.
 
-Resultaat van deze verbeteringsronde op Mac/Python 3.14: **149 offline Python-tests geslaagd**, inclusief 24 nieuwe fout-/herstel-/concurrencycontroles. Frontendtests slagen ook met de buffer-volmelding, naast bestaande bronrace-, DVD- en herstelcontroles. Pythoncompilatie, JavaScript-syntaxis en CLI-help van beide nieuwe hulpmiddelen zijn gecontroleerd. Geen tests op de Pi/VPS, echte MPD, FFmpeg-conversie, USB, Bluetooth of Apple TV uitgevoerd.
+## Bestaande contracten en nieuwe beheercontroles
 
-Uitrolvoorbereiding: twee extra regressies controleren de begrensde eerste serverstatuscontrole en het overslaan van reeds opgeslagen tracks; totaal 151 offline tests. Een geïsoleerde echte MPD op de Pi met null-output bevestigde dat seekid naar een vervangende stream de pauzestand en positie behoudt. Dit was geen hoorbare of optische hardwaretest.
+De suite bewaart lokale-track-pinning, positieherstel, uploadidempotentie, volledige-WAV-validatie, drivewatchdogs, CD-Text/TOC, DVD-exclusiviteit/ondertitels, vinyltransities en bronstatusvolgorde. Nieuwe tests dekken release-identiteit, configvalidatie, servicevoorstellen, runtime-/onderhoudslocks, veilige discovery, repository-audit, private-backup-integriteit en deploy-/rollbackfouten.
 
-Na de Pi-uitrol zijn de 151 regressies ook in Pi-staging geslaagd en zijn beide echte MPD-integratietests met stille uitvoer uitgevoerd. Zie pi-deployment-2026-11-07.md; USB-, Bluetooth-luister- en DVD-weergavecontroles zijn daarvan uitdrukkelijk gescheiden.
+De HTTP-tests controleren responsegegevens vóór voltooiing, gelijktijdige health en echte Range/HEAD op de bestaande lokale-audioroute. Dit ondersteunt het afzonderlijke productie-startpunt; het bewijst geen langdurige Apple-TV- of Bluetooth-werking.
+
+## Geïsoleerde MPD-integratie en echte hardware
+
+`make check-hardware ALLOW_INTEGRATION=1` start uitsluitend de bestaande synthetische MPD/null-/recorderproeven. Dit vereist een vrijgegeven omgeving met geschikte MPD. Gewone CI start deze proeven niet. USB-resets, beschadigde cd's, hoorbare bronwissels, Bluetooth, fysieke eject en DVD op Apple TV blijven afzonderlijke praktijkcontroles.
+
+Historisch: op 7 november slaagden de eerste 125 offline tests; na de betrouwbaarheidscorrecties 151 op Mac én Pi. Bij uitrol van 70eb61f slaagden twee echte, geïsoleerde MPD-tests voor groeiende WAV/seek na unlink en crossfade. Zie pi-deployment-2026-11-07.md. Die uitkomsten zijn geen bewijs dat latere bronwijzigingen al live of op hardware zijn getest.

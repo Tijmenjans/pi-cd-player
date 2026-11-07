@@ -1,0 +1,2 @@
+# Optional production entrypoint; does not change the existing Pi service.
+waitress==3.0.2

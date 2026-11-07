@@ -7,6 +7,7 @@ import unittest
 import urllib.error
 from pathlib import Path
 from unittest.mock import patch
+import tests as _isolated_test_state
 import app as player
 from archive_queue import ArchiveQueue
 from live_audio import GrowingWav, RATE, wav_header

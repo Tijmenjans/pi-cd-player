@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import tests as _isolated_test_state
 import app as player
 from archive_queue import ArchiveQueue
 from test_archive_api import MPD, Store

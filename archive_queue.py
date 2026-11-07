@@ -40,7 +40,7 @@ class ArchiveQueue:
             self.recovered=True
             try:
                 rows=self.execute('currentsong','status','playlistinfo')
-                prefix=f'file: http://127.0.0.1:8080/audio/{disc["id"]}/'
+                prefix='file: '+getattr(self.archive,'audio_base_url','http://127.0.0.1:8080')+f'/audio/{disc["id"]}/'
                 saved_uri=next((r[6:] for r in rows[0] if r.startswith(prefix)),None)
                 # A local stream token belongs to the previous web process; reload it
                 # through the current buffer/server rather than recovering a stale URL.

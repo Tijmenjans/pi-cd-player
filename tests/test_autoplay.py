@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[1]))
+import tests as _isolated_test_state
 import app as player
 
 

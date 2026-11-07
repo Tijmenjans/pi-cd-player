@@ -10,6 +10,7 @@ import time
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
+import tests as _isolated_test_state
 import app
 import catalogue
 from archive import Archive
@@ -92,7 +93,7 @@ class StateAndSourceTests(unittest.TestCase):
                 self.assertTrue(app.stop_runtime(timeout=2));self.assertEqual(app.runtime_threads,[])
 
     def test_import_does_not_start_background_workers(self):
-        code="import sys,types,threading;sys.modules['libdiscid']=types.SimpleNamespace();threading.Thread.start=lambda self: (_ for _ in ()).throw(AssertionError('worker at import'));import app;assert not app.runtime_threads"
+        code="import threading;threading.Thread.start=lambda self: (_ for _ in ()).throw(AssertionError('worker at import'));import app;assert not app.runtime_threads"
         subprocess.run([sys.executable,'-c',code],cwd=ROOT,check=True,capture_output=True,timeout=10)
 
 class OpticalTests(unittest.TestCase):

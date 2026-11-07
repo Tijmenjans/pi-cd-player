@@ -1,5 +1,7 @@
 # Deployment en installatiegrenzen
 
+Voor nieuwe Pi-uitrollen gebruik je de [onderhouden deploymenttool](deployment-tool.md). Deze vervangt de eerdere eenmalige scripts; hieronder staan ook de bestaande installatiepaden en herstelachtergrond. Configuratie- en servicewijzigingen volgen afzonderlijke [gegenereerde voorstellen](configuration.md).
+
 Actuele status: de Pi is bijgewerkt naar 70eb61f; de VPS is ongewijzigd. Zie [uitrolverslag](pi-deployment-2026-11-07.md). De onderstaande procedure beschrijft ook toekomstige updates. Productie blijft `/home/tijmen/cdspeler` op Pi 192.168.1.232 (tijmen, armv7l, 32-bit Raspbian 13); VPS via bestaande SSH-alias `hetzner-coolify`. Gebruik tools/pi-ssh en tools/vps-ssh zoals beschreven in access.md; de private Pi-sleutel staat in de genegeerde .ssh/-map en hoort nooit in Git. Sudo vereist normaal een wachtwoord.
 
 ## Bestaande installatie bijwerken

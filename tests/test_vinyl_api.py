@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch, call
 
+import tests as _isolated_test_state
 import app as player
 from vinyl import Vinyl
 

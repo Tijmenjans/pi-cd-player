@@ -11,13 +11,13 @@ Werk voortaan vanuit dit project. Gebruik `./tools/pi-ssh` voor de Pi en `./tool
 ## Ontwikkelen en testen
 
 ```sh
-python3 -m venv .venv
-.venv/bin/pip install -r requirements-test.txt
-.venv/bin/python tools/run_tests.py
-node tests/test_frontend.cjs
+make setup
+make check
+make check-http
+./tools/deploy plan --dry-run
 ```
 
-De offline runner kopieert code en fixtures naar een tijdelijke map en vervangt libdiscid expliciet door een drive-simulatie. Start `app.py` niet als test: dat activeert achtergrondwerk. Voor productie zijn ook native Linux-pakketten en privéconfiguratie nodig. Zie [tests](docs/testing.md), [architectuur](docs/architecture.md), [deployment](docs/deployment.md), [herstel](docs/recovery.md) en [overdracht](docs/migration.md).
+Tests draaien via gewone unittest-discovery met tijdelijke runtime-state en expliciete optische testadapters. `make check-http` gebruikt uitsluitend synthetische data en lokale HTTP-sockets; echte MPD-/hardwarechecks blijven opt-in. Start `app.py` niet als test: dat activeert achtergrondwerk. Zie [onderhoudsplan](docs/management-plan.md), [deploymenttool](docs/deployment-tool.md), [configuratie](docs/configuration.md), [checks](docs/checks.md), [tests](docs/testing.md) en [private backups](docs/private-backups.md).
 
 DVD gaat uitsluitend rechtstreeks naar `http://192.168.1.232:8080/dvd/live.mkv`. Geen dvd-archivering naar Plex. De bestaande vijf bronnen en UI zijn ongewijzigd overgenomen.
 

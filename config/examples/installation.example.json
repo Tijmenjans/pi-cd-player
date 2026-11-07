@@ -1,0 +1,9 @@
+{
+  "web_host": "0.0.0.0",
+  "web_port": 8080,
+  "mpd_host": "127.0.0.1",
+  "mpd_port": 6601,
+  "speaker_address": "6C:5C:3D:3C:2B:A3",
+  "vinyl_source": "alsa_input.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.analog-stereo-input",
+  "web_threads": 8
+}

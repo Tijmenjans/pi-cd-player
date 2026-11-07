@@ -1,3 +1,4 @@
+from runtime_settings import Settings
 """Forward the UFO202 to the paired IKEA speaker while Vinyl is selected."""
 import json
 import signal
@@ -5,9 +6,10 @@ import subprocess
 import time
 from pathlib import Path
 
-SOURCE = 'alsa_input.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.analog-stereo-input'
-SPEAKER = '6C:5C:3D:3C:2B:A3'
-ROOT = Path(__file__).resolve().parent
+SETTINGS = Settings.load()
+SOURCE = SETTINGS.vinyl_source
+SPEAKER = SETTINGS.speaker_address
+ROOT = SETTINGS.install_root
 
 
 def endpoints(nodes):

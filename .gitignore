@@ -36,3 +36,8 @@ node_modules/
 ._*
 .coverage
 .pytest_cache/
+
+# Installed release identity and generated local configuration
+/release.json
+.local/
+/.deployment.lock

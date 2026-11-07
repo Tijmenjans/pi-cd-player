@@ -29,3 +29,9 @@ De VPS heeft een persistente, samengevoegde Plex-refresh-taak in SQLite met back
 Catalogusentries worden afzonderlijk gevalideerd; bevestigde disc_ids krijgen voorrang op lengtematching en blijven zelf aan TOC-lengtes getoetst. Trackduur wordt nooit door Discogs overschreven. state_store.py verzorgt atomische private instellingen; herstel- en queuebestanden worden ook naar opslag gesynchroniseerd.
 
 Bij een nieuwe cd krijgt de onafhankelijke serverstatuscontrole maximaal twee seconden voorsprong vóór de eerste lokale read. Een snel beschikbare archiefkopie voorkomt zo onnodig opnieuw rippen; een trage/onbereikbare server houdt de lokale reader niet gedurende een netwerk-timeout tegen.
+
+## Onderhoudsstandaardisatie
+
+runtime_settings.py valideert niet-geheime installatie-instellingen met ongewijzigde defaults. optical_disc.py en de expliciete device-provider isoleren tests zonder modules in sys.modules te vervangen. Statische resources blijven gekoppeld aan de actieve code. RuntimeOwner voorkomt twee hardware-eigenaars; de onderhoudslease beschermt nieuwe HTTP-acties tijdens deployment. Externe directe MPD-bediening blijft een aparte grens.
+
+/health controleert het webproces zonder hardware-/netwerkprobe. /ready controleert de eigen workers. /api/version en release bij status bevatten alleen publieke release-identiteit; het volledige bestandsmanifest blijft buiten de API. Een ontbrekende/ongeldige marker wordt eerlijk als onbekende versie gemeld. De VPS-health kan de expliciete ARCHIVE_RELEASE uit de image-build tonen; zonder buildcommit is die onbekend.

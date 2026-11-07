@@ -17,6 +17,7 @@ import urllib.request
 import wave
 from pathlib import Path
 from state_store import write_json
+from runtime_settings import Settings
 from live_audio import GrowingWav, RATE
 from optical_reader import OpticalLease, ProgressWatchdog, ReadFailure, DriveBusy, stop_process
 
@@ -80,6 +81,7 @@ class Cloud:
 class Archive:
     def __init__(self, root):
         self.root = Path(root)
+        self.audio_base_url = Settings.load(code_root=self.root,environ={k:v for k,v in os.environ.items() if k!='CDSPELER_ROOT'}).audio_base_url
         self.stage = self.root/'data'/'rip-staging'
         self.stage.mkdir(parents=True,exist_ok=True)
         self.lock = threading.RLock()
@@ -243,7 +245,7 @@ class Archive:
             return uri
 
     def server_uri(self, number):
-        with self.lock:return f'http://127.0.0.1:8080/audio/{self.disc["id"]}/{number}'
+        with self.lock:return f'{self.audio_base_url}/audio/{self.disc["id"]}/{number}'
 
     def release_playback(self):
         with self.lock:

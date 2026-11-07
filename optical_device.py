@@ -4,7 +4,15 @@ from pathlib import Path
 
 class OpticalDeviceError(RuntimeError):pass
 
+_provider=None
+
+def configure_device_provider(provider=None):
+    global _provider
+    _provider=provider
+
 def optical_device(dev_root=Path('/dev'),sys_root=Path('/sys/class/block')):
+    if _provider is not None and Path(dev_root)==Path('/dev') and Path(sys_root)==Path('/sys/class/block'):
+        return _provider()
     candidates=[]
     for node in sorted(Path(sys_root).glob('sr[0-9]*')):
         device=node/'device'

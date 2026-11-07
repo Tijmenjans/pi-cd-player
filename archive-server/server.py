@@ -380,6 +380,12 @@ def conversion_loop():
             enqueue(disc, number)
 
 
+def health_payload():
+    commit=os.environ.get('ARCHIVE_RELEASE','')
+    if not re.fullmatch(r'[0-9a-f]{40}',commit):commit=None
+    return {'ok':True,'component':'cd-archive','release':{'commit':commit}}
+
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
 
@@ -405,7 +411,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def dispatch(self):
         if self.path == '/health' and self.command == 'GET':
-            self.json(200, {'ok':True})
+            self.json(200, health_payload())
             return
         if not self.authorized(): return
         path = urllib.parse.urlsplit(self.path).path

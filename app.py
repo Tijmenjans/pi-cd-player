@@ -14,7 +14,11 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
-import libdiscid
+import optical_disc as libdiscid
+from runtime_settings import Settings
+from release_info import read_release
+from runtime_owner import RuntimeOwner
+from maintenance_guard import guarded_action
 import spotify
 import plexamp
 from dvd import DVD
@@ -28,10 +32,12 @@ from archive import Archive
 from archive_queue import ArchiveQueue
 from flask import Flask, jsonify, request, send_from_directory, abort, Response, stream_with_context
 
-ROOT = Path(__file__).resolve().parent
+CODE_ROOT = Path(__file__).resolve().parent
+SETTINGS = Settings.load()
+ROOT = SETTINGS.install_root
 DATA = ROOT / 'data'
 DATA.mkdir(exist_ok=True)
-app = Flask(__name__, static_folder='static')
+app = Flask(__name__, static_folder=str(CODE_ROOT/'static'))
 vinyl = Vinyl(ROOT)
 lock = threading.RLock()
 disc = {'present': False, 'tracks': [], 'loading': True}
@@ -49,7 +55,7 @@ def service(action, name):
 
 
 def mpd(*commands):
-    with socket.create_connection(('127.0.0.1', 6601), timeout=4) as sock:
+    with socket.create_connection((SETTINGS.mpd_host, SETTINGS.mpd_port), timeout=4) as sock:
         f = sock.makefile('rwb')
         if not f.readline().startswith(b'OK MPD'):
             raise RuntimeError('De cd-speler reageert niet.')
@@ -228,7 +234,7 @@ def enrich_once(snapshot,job=None):
         except (OSError,ValueError):metadata={}
         if not isinstance(metadata,dict):metadata={}
         if not metadata.get('releases'):
-            alternate=catalogue.lookup(snapshot,ROOT/'catalogue')
+            alternate=catalogue.lookup(snapshot,CODE_ROOT/'catalogue')
             if alternate:metadata=alternate
         # Existing good metadata/explicit choices survive network outages. An old
         # negative result must not suppress the new broader lookup.
@@ -458,7 +464,7 @@ def protect_changes():
 
 @app.get('/')
 def index():
-    return send_from_directory(ROOT / 'static', 'index.html')
+    return send_from_directory(CODE_ROOT / 'static', 'index.html')
 
 
 @app.get('/cover/<name>')
@@ -568,12 +574,26 @@ def dvd_live_stream():
     return Response(frames(),mimetype='video/x-matroska',headers={'Cache-Control':'no-store','Accept-Ranges':'none'})
 
 
+@app.get('/health')
+def health():
+    return jsonify(ok=True,component='pi-player',release=read_release(ROOT))
+
+@app.get('/ready')
+def ready():
+    active=bool(runtime_threads) and not runtime_stop.is_set() and all(t.is_alive() for t in runtime_threads)
+    return jsonify(ok=active,component='pi-player',release=read_release(ROOT)),200 if active else 503
+
+@app.get('/api/version')
+def version():
+    return jsonify(read_release(ROOT))
+
 @app.get('/api/status')
 def status():
     if not transition_lock.acquire(blocking=False):
         with lock:
             cached=copy.deepcopy(status_cache) if status_cache.get('source')==source else {'source':source,'streaming_source':streaming_source,'disc':copy.deepcopy(disc),'player':{'state':'stop','buffering':True},'output':audio.snapshot()}
             cached['transition']=dict(transition)
+            cached['release']=read_release(ROOT)
         return jsonify(cached)
     try:
         with lock:
@@ -584,7 +604,7 @@ def status():
     finally:transition_lock.release()
 
 def _status_snapshot(source,streaming_source,disc):
-    result = {'source': source, 'streaming_source': streaming_source, 'disc': copy.deepcopy(disc), 'player': {}, 'device': 'CDspeler', 'output': audio.snapshot(), 'transition':dict(transition)}
+    result = {'source': source, 'streaming_source': streaming_source, 'disc': copy.deepcopy(disc), 'player': {}, 'device': 'CDspeler', 'output': audio.snapshot(), 'transition':dict(transition), 'release':read_release(ROOT)}
     saved=archive.snapshot()
     result['archive']=saved
     if source == 'cd' and saved.get('drive_blocked'):result['error']=saved.get('error')
@@ -639,6 +659,7 @@ def _status_snapshot(source,streaming_source,disc):
     return jsonify(result)
 
 @app.post('/api/action')
+@guarded_action(ROOT/'.deployment.lock')
 def action():
     try:
         payload = request.get_json()
@@ -737,22 +758,28 @@ def action():
 runtime_stop = threading.Event()
 runtime_threads = []
 runtime_lock = threading.Lock()
+runtime_owner = RuntimeOwner(DATA/'runtime.lock')
 
 def start_runtime():
     global source
     with runtime_lock:
         if runtime_threads:return
-        runtime_stop.clear();archive.stopping.clear()
-        if source=='vinyl' and not vinyl.connected():source='cd'
-        choose_source(source)
-        workers=[archive.run,archive.upload_loop,archive.monitor,scan_loop,queue_loop,
-                 lambda: audio.observe(runtime_stop),lambda: vinyl.observe(runtime_stop),
-                 lambda: spotify.observe(runtime_stop),
-                 lambda: plexamp.observe(lambda:source=='plexamp',runtime_stop),
-                 lambda: plexamp.observe_metadata(runtime_stop),lambda: dvd.observe(runtime_stop)]
-        for worker in workers:
-            thread=threading.Thread(target=worker,daemon=True)
-            runtime_threads.append(thread);thread.start()
+        runtime_owner.acquire()
+        try:
+            runtime_stop.clear();archive.stopping.clear()
+            if source=='vinyl' and not vinyl.connected():source='cd'
+            choose_source(source)
+            workers=[archive.run,archive.upload_loop,archive.monitor,scan_loop,queue_loop,
+                     lambda: audio.observe(runtime_stop),lambda: vinyl.observe(runtime_stop),
+                     lambda: spotify.observe(runtime_stop),
+                     lambda: plexamp.observe(lambda:source=='plexamp',runtime_stop),
+                     lambda: plexamp.observe_metadata(runtime_stop),lambda: dvd.observe(runtime_stop)]
+            for worker in workers:
+                thread=threading.Thread(target=worker,daemon=True)
+                runtime_threads.append(thread);thread.start()
+        except BaseException:
+            if not runtime_threads:runtime_owner.release()
+            raise
 
 def stop_runtime(timeout=8):
     with runtime_lock:
@@ -768,6 +795,7 @@ def stop_runtime(timeout=8):
         deadline=time.monotonic()+timeout
         for thread in runtime_threads:thread.join(max(0,deadline-time.monotonic()))
         runtime_threads[:]=[thread for thread in runtime_threads if thread.is_alive()]
+        if not runtime_threads:runtime_owner.release()
         return not runtime_threads
 
 if __name__ == '__main__':
@@ -776,5 +804,5 @@ if __name__ == '__main__':
     signal.signal(signal.SIGTERM,terminate)
     try:
         start_runtime()
-        app.run(host='0.0.0.0', port=8080, threaded=True, debug=False)
+        app.run(host=SETTINGS.web_host, port=SETTINGS.web_port, threaded=True, debug=False)
     finally:stop_runtime()
