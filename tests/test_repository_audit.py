@@ -106,3 +106,11 @@ class IndexAuditTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class UIVideoAuditTests(unittest.TestCase):
+    def test_only_named_bounded_mp4_asset_is_allowed(self):
+        import tools.check_repository as audit
+        self.assertEqual(audit.audit_blob('static/christmas-fire.mp4',b'\x00\x00\x00\x18ftypisom'),[])
+        self.assertTrue(audit.audit_blob('static/christmas-fire.mp4',b'not a video'))
+        self.assertTrue(audit.audit_blob('static/christmas-fire.mp4',b'\x00\x00\x00\x18ftyp'+b'x'*(2*1024*1024)))
+        self.assertTrue(audit.path_is_private('static/other.mp4'))

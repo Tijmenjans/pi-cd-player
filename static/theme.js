@@ -12,6 +12,38 @@ try {
 } catch (_) {}
 if (!themes.includes(themePreference)) themePreference = null;
 
+const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+let hearthFailed = false;
+let hearthRevision = 0;
+function syncHearthVideo() {
+  const video = document.getElementById("hearth-video");
+  if (!video) return;
+  const revision = ++hearthRevision;
+  const active =
+    document.documentElement.dataset.theme === "christmas" &&
+    holidayEffects &&
+    !reducedMotion?.matches &&
+    !document.hidden &&
+    !hearthFailed;
+  if (!active) {
+    video.pause();
+    document.documentElement.dataset.hearthVideo = "off";
+    return;
+  }
+  video.muted = true;
+  if (!video.getAttribute("src")) video.src = video.dataset.src;
+  const playing = video.play();
+  playing
+    ?.then(() => {
+      if (revision !== hearthRevision) return;
+      document.documentElement.dataset.hearthVideo = "on";
+    })
+    .catch(() => {
+      if (revision !== hearthRevision) return;
+      video.pause();
+      document.documentElement.dataset.hearthVideo = "off";
+    });
+}
 function applyTheme() {
   const preference =
     themePreference || (systemTheme?.matches ? "dark" : "light");
@@ -29,6 +61,7 @@ function applyTheme() {
     effectsButton.setAttribute("aria-label", effectsLabel);
     effectsButton.title = effectsLabel;
   }
+  syncHearthVideo();
   const colors = { light: "#f1f0ec", dark: "#181816", christmas: "#14251f" };
   document
     .querySelector('meta[name="theme-color"]')
@@ -76,3 +109,12 @@ window.addEventListener("storage", (event) => {
 });
 
 tvLayout?.addEventListener("change", applyTheme);
+
+reducedMotion?.addEventListener("change", syncHearthVideo);
+document.addEventListener("visibilitychange", syncHearthVideo);
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("hearth-video")?.addEventListener("error", () => {
+    hearthFailed = true;
+    syncHearthVideo();
+  });
+});

@@ -103,6 +103,24 @@ class Transactions(unittest.TestCase):
         self.system.web_pid=lambda:b'456'
         return remote.dispatch({'action':'assets','bundle':b or self.asset_bundle()},self.system,self.root)
 
+    def test_explicit_new_ui_video_can_be_added_and_failed_update_removes_it(self):
+        candidate=bundle(names={'app.py':b'# original\n','static/app.js':b'// original\n','static/christmas-fire.mp4':b'\x00\x00\x00\x18ftypisom'})
+        self.system.web_pid=lambda:b'456'
+        with self.assertRaises(remote.Refused):self.assets(candidate)
+        request={'action':'assets','bundle':candidate,'baseline':{'static/christmas-fire.mp4':None}}
+        original=self.system.healthy;calls=[0]
+        def healthy(manifest):
+            calls[0]+=1
+            if calls[0]==2:raise OSError('synthetic failure')
+            original(manifest)
+        self.system.healthy=healthy
+        with self.assertRaises(remote.Refused):remote.dispatch(request,self.system,self.root)
+        self.assertFalse((self.root/'static/christmas-fire.mp4').exists())
+        self.system.healthy=original
+        result=remote.dispatch(request,self.system,self.root)
+        self.assertTrue(result['ok']);self.assertTrue((self.root/'static/christmas-fire.mp4').exists())
+        self.assertNotIn('stop',self.system.calls)
+
     def test_static_update_preserves_active_runtime_without_mpd_or_status_calls(self):
         self.system=Fake('play')
         self.system.mpd=lambda command: (_ for _ in ()).throw(AssertionError('MPD must not be contacted'))

@@ -110,6 +110,7 @@ const cover =
         colorScheme: "light",
       });
       const page = await context.newPage();
+      let movieRequests = 0;
       let state = fixture("cd");
       page.on("pageerror", (error) => failures.push(error.message));
       await page.route("**/*", async (route) => {
@@ -125,6 +126,7 @@ const cover =
         }
         if (url.pathname === "/static/preview-cover.svg")
           return route.fulfill({ contentType: "image/svg+xml", body: cover });
+        if (url.pathname.endsWith(".mp4")) movieRequests++;
         const file =
           url.pathname === "/" ? "static/index.html" : url.pathname.slice(1);
         if (!/^static\/[\w.-]+$/.test(file)) return route.abort();
@@ -133,6 +135,7 @@ const cover =
           ".js": "text/javascript",
           ".css": "text/css",
           ".jpg": "image/jpeg",
+          ".mp4": "video/mp4",
         };
         return route.fulfill({
           contentType: types[path.extname(file)],
@@ -263,6 +266,11 @@ const cover =
             .evaluate((el) => getComputedStyle(el).animationName),
           "none",
         );
+        assert.equal(
+          movieRequests,
+          0,
+          "Reduced motion must not download the video",
+        );
         await page.emulateMedia({ reducedMotion: "no-preference" });
         assert.equal(
           await page
@@ -271,17 +279,33 @@ const cover =
           "block",
         );
         assert.equal(await page.locator(".christmas-snow i").count(), 16);
-        assert.equal(
-          await page
-            .locator(".hearth-photo")
-            .evaluate((el) => getComputedStyle(el).animationName),
-          "hearth-approach",
+        await page.waitForFunction(
+          () => document.documentElement.dataset.hearthVideo === "on",
         );
-        assert.equal(
+        assert(
           await page
-            .locator(".hearth-photo")
-            .evaluate((el) => getComputedStyle(el, "::after").animationName),
-          "hearth-flames",
+            .locator("#hearth-video")
+            .evaluate(
+              (v) => !v.paused && v.muted && v.loop && v.videoWidth === 1280,
+            ),
+        );
+        await page.waitForFunction(
+          () => document.getElementById("hearth-video").currentTime > 0.1,
+        );
+        await page.evaluate(() => {
+          Object.defineProperty(document, "hidden", {
+            configurable: true,
+            value: true,
+          });
+          document.dispatchEvent(new Event("visibilitychange"));
+        });
+        assert(await page.locator("#hearth-video").evaluate((v) => v.paused));
+        await page.evaluate(() => {
+          delete document.hidden;
+          document.dispatchEvent(new Event("visibilitychange"));
+        });
+        await page.waitForFunction(
+          () => document.documentElement.dataset.hearthVideo === "on",
         );
         assert.equal(
           await page
@@ -301,6 +325,7 @@ const cover =
           fullPage: true,
         });
         await page.locator("#holiday-effects").click();
+        assert(await page.locator("#hearth-video").evaluate((v) => v.paused));
         assert.equal(
           await page.locator("html").getAttribute("data-holiday-effects"),
           "off",
@@ -319,6 +344,20 @@ const cover =
           "Holiday preference must persist",
         );
         await page.locator("#holiday-effects").click();
+        await page.waitForFunction(
+          () => document.documentElement.dataset.hearthVideo === "on",
+        );
+        await page.evaluate(() =>
+          document
+            .getElementById("hearth-video")
+            .dispatchEvent(new Event("error")),
+        );
+        assert(await page.locator("#hearth-video").evaluate((v) => v.paused));
+        assert.equal(
+          await page.locator("html").getAttribute("data-hearth-video"),
+          "off",
+        );
+        assert(await page.locator(".hearth-photo").isVisible());
         await page.setViewportSize({ width: 390, height: 844 });
         await page.waitForFunction(
           () => document.documentElement.dataset.theme === "dark",

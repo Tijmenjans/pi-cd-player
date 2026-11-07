@@ -41,7 +41,7 @@ def allowed(name):
     p = PurePosixPath(name)
     if p.is_absolute() or str(p) != name or any(x in ('..', '.') or x.startswith('.') for x in p.parts):
         return False
-    return ((len(p.parts) == 1 and re.fullmatch(r'[A-Za-z0-9_-]+\.py', name) is not None)
+    return (name == 'static/christmas-fire.mp4' or (len(p.parts) == 1 and re.fullmatch(r'[A-Za-z0-9_-]+\.py', name) is not None)
             or (len(p.parts) > 1 and p.parts[0] == 'static'
                 and p.suffix.lower() in {'.js', '.css', '.svg', '.png', '.jpg', '.jpeg', '.webp', '.ico', '.html'})
             or (len(p.parts) == 2 and p.parts[0] == 'catalogue' and p.suffix == '.json')
@@ -318,13 +318,17 @@ def restore(root, backup, info):
     verify(root, info['previous'])
 
 
-def assets_transaction(root, manifest, content, system):
+def assets_transaction(root, manifest, content, system, baseline=None):
     """Static-only update: no status/MPD/optical calls, no service stop/start."""
     system.verify_identity(root)
     old=installed(root)
     require(old is not None,'Static updates require an installed release')
-    require(set(old['files'])==set(manifest['files']),'Static updates cannot add/remove paths')
-    changed={name for name,entry in manifest['files'].items() if old['files'][name]!=entry}
+    added=set(manifest['files'])-set(old['files'])
+    require(not (set(old['files'])-set(manifest['files'])),'Static updates cannot remove paths')
+    require(added <= {'static/christmas-fire.mp4'} and all(baseline is not None and name in baseline and baseline[name] is None and record(safe_path(root,name)) is None for name in added),'New UI video requires explicit absent baseline')
+    if 'static/christmas-fire.mp4' in manifest['files']:
+        require(len(content['static/christmas-fire.mp4']) <= 2*1024*1024 and content['static/christmas-fire.mp4'][4:8] == b'ftyp','Invalid or oversized UI video')
+    changed={name for name,entry in manifest['files'].items() if old['files'].get(name)!=entry}
     require(bool(changed) and all(name.startswith('static/') for name in changed),
             'Only existing static files may change; runtime changes require normal apply')
     verify(root,old['files'])
@@ -336,6 +340,7 @@ def assets_transaction(root, manifest, content, system):
     previous={name:record(safe_path(root,name)) for name in list(manifest['files'])+['release.json']}
     info={'schema':1,'mode':'assets','previous':previous,'installed':manifest,'old_manifest':old}
     for name,entry in previous.items():
+        if entry is None:continue
         dest=backup/'code'/name;dest.parent.mkdir(parents=True,exist_ok=True)
         shutil.copy2(safe_path(root,name),dest)
         require(record(dest)==entry,'Static backup verification failed')
@@ -348,7 +353,7 @@ def assets_transaction(root, manifest, content, system):
         verify(root,old['files']);require(installed(root)==old,'Release changed during staging')
         require(system.web_pid()==pid,'Web process changed during staging')
         try:
-            for name in sorted(changed):atomic_write(safe_path(root,name),(stage/name).read_bytes(),manifest['files'][name]['mode'])
+            for name in sorted(changed,key=lambda n:(n.endswith('.html'),n)):atomic_write(safe_path(root,name),(stage/name).read_bytes(),manifest['files'][name]['mode'])
             atomic_write(root/'release.json',json.dumps(manifest).encode(),0o644)
             verify(root,manifest['files']);system.healthy(manifest);system.verify_identity(root)
             require(system.web_pid()==pid,'Web process changed during static update')
@@ -356,9 +361,10 @@ def assets_transaction(root, manifest, content, system):
             try:
                 # Restore only the assets and marker; never touch loaded modules.
                 for name in sorted(changed|{'release.json'}):
-                    require(record(backup/'code'/name)==previous[name],'Static recovery backup corrupt')
+                    require(previous[name] is None or record(backup/'code'/name)==previous[name],'Static recovery backup corrupt')
                 for name in sorted(changed|{'release.json'}):
-                    atomic_write(safe_path(root,name),(backup/'code'/name).read_bytes(),previous[name]['mode'])
+                    if previous[name] is None:safe_path(root,name).unlink(missing_ok=True)
+                    else:atomic_write(safe_path(root,name),(backup/'code'/name).read_bytes(),previous[name]['mode'])
                 verify(root,old['files']);system.healthy(old)
             except BaseException:
                 raise Refused('Static recovery failed. Safety backup ID: '+backup.name) from None
@@ -547,7 +553,7 @@ def dispatch(request, system=None, root=ROOT):
         if action == 'rollback':
             return rollback(root, request['backup_id'], system)
         manifest, content = validate_bundle(request['bundle'])
-        if action == 'assets':return assets_transaction(root, manifest, content, system)
+        if action == 'assets':return assets_transaction(root, manifest, content, system, request.get('baseline'))
         return transaction(root, manifest, content, system, request.get('baseline'))
 
 

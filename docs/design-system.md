@@ -54,3 +54,5 @@ Kerstgimmicks: warme lichtjes bovenaan, zestien langzaam vallende sneeuwvlokjes 
 De browsercontrole test de kerstknop, opgeslagen effectvoorkeur, zestien vlokken, minder beweging, doorklikbare decoratie en terugschakelen naar mobiel donker. Screenshots gebruiken fictieve media. Alleen de static-bestanden worden via tools/deploy assets bijgewerkt; daarvoor hoeven webservice en MPD niet te herstarten.
 
 De haard heeft een nauwere uitsnede, langzaam bewegende fotolagen en fluctuerende vuurgloed. Het is een CSS-animatie van de lokale haardfoto, geen vuurvideo; er wordt geen extra media- of audiostream gestart. De sneeuwvlokken variëren van 5 tot 11 pixels. De sterknop stopt ook de haardanimaties; minder beweging maakt de haard volledig statisch.
+
+De geanimeerde foto is vervangen door een echte geluidloze 720p-haardvideo. Zie [bron, licentie, bouwinstructies en afspeelgrenzen](fireplace-video.md). De foto blijft de terugval; sneeuw en sterknop zijn behouden.

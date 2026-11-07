@@ -15,6 +15,7 @@ PATTERNS = (
 
 def path_is_private(name):
     """Only narrow example exceptions; these still undergo content inspection."""
+    if name == "static/christmas-fire.mp4":return False
     path = PurePosixPath(name)
     parts = [p.lower() for p in path.parts]
     base = parts[-1]
@@ -37,6 +38,8 @@ def path_is_private(name):
 def audit_blob(name, data):
     """Return reasons only; never return matching credential values."""
     reasons = []
+    if name == "static/christmas-fire.mp4" and data[4:8] != b"ftyp":
+        reasons.append("invalid UI video container")
     if path_is_private(name):
         reasons.append('excluded file category')
     if len(data) > MAX_BYTES:

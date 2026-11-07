@@ -41,3 +41,6 @@ node_modules/
 /release.json
 .local/
 /.deployment.lock
+
+# Small licensed UI loop only; personal/runtime movies remain excluded.
+!/static/christmas-fire.mp4

@@ -1334,58 +1334,6 @@ body[data-source="spotify"] .now-artist {
   }
 }
 
-/* A closer, living hearth: local photographic layers, no video/audio stream. */
-:root[data-theme="christmas"] .hearth-photo {
-  inset: -4%;
-  opacity: 1;
-  background-position: center 65%;
-  transform: scale(1.04);
-}
-:root[data-holiday-effects="on"] .hearth-photo {
-  animation: hearth-approach 24s ease-in-out infinite alternate;
-}
-.hearth-photo::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: url("/static/christmas-fire.jpg") center 65% / cover no-repeat;
-  mask-image: linear-gradient(transparent 26%, #000a 48%, transparent 85%);
-  -webkit-mask-image: linear-gradient(
-    transparent 26%,
-    #000a 48%,
-    transparent 85%
-  );
-  mix-blend-mode: screen;
-  opacity: 0;
-  transform-origin: center 78%;
-}
-:root[data-holiday-effects="on"] .hearth-photo::after {
-  animation: hearth-flames 4.7s ease-in-out infinite alternate;
-}
-.hearth-matte::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse at 48% 85%,
-    #ef871f66,
-    #b64c1620 42%,
-    transparent 74%
-  );
-  opacity: 0.25;
-}
-:root[data-holiday-effects="on"] .hearth-matte::after {
-  animation: hearth-embers 6.3s ease-in-out infinite alternate;
-}
-:root[data-theme="christmas"] .hearth-matte {
-  background: linear-gradient(
-    180deg,
-    #10221ed9,
-    #17271db5 30%,
-    #25191c6b 65%,
-    #24151338
-  );
-}
 .christmas-snow {
   opacity: 0.68;
 }
@@ -1396,51 +1344,38 @@ body[data-source="spotify"] .now-artist {
   opacity: 0.55;
   filter: blur(0.6px);
 }
-@keyframes hearth-approach {
-  from {
-    transform: scale(1.04) translate3d(-0.3%, 0.2%, 0);
-  }
-  to {
-    transform: scale(1.1) translate3d(0.3%, -0.6%, 0);
-  }
+/* Real silent video; the local photograph stays available behind it. */
+.hearth-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 65%;
+  opacity: 0;
+  pointer-events: none;
 }
-@keyframes hearth-flames {
-  0% {
-    transform: scale(1, 1.01);
-    opacity: 0.12;
-  }
-  35% {
-    transform: scale(1.013, 1.045) translate3d(-0.3%, -0.5%, 0);
-    opacity: 0.28;
-  }
-  70% {
-    transform: scale(0.995, 1.02) translate3d(0.3%, 0, 0);
-    opacity: 0.17;
-  }
-  100% {
-    transform: scale(1.01, 1.065) translate3d(0, -1%, 0);
-    opacity: 0.34;
-  }
+:root[data-hearth-video="on"] .hearth-video {
+  opacity: 1;
 }
-@keyframes hearth-embers {
-  0%,
-  100% {
-    opacity: 0.19;
-  }
-  25% {
-    opacity: 0.38;
-  }
-  57% {
-    opacity: 0.25;
-  }
-  82% {
-    opacity: 0.43;
-  }
+.hearth-credit {
+  font:
+    11px/1.5 -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  margin-left: 12px;
+  color: var(--muted);
+}
+:root[data-holiday-effects="on"] .hearth-photo,
+:root[data-holiday-effects="on"] .hearth-photo::after,
+:root[data-holiday-effects="on"] .hearth-matte::after {
+  animation: none;
+}
+.hearth-photo::after {
+  display: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .hearth-photo,
-  .hearth-photo::after,
-  .hearth-matte::after {
-    animation: none !important;
+  .hearth-video {
+    display: none !important;
   }
 }

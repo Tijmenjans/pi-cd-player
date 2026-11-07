@@ -8,13 +8,26 @@
     />
     <meta name="theme-color" content="#f9f9f8" />
     <title>CDspeler · Muziek voor thuis</title>
-    <script src="/static/theme.js?v=6"></script>
-    <link rel="stylesheet" href="/static/style.css?v=43" />
+    <script src="/static/theme.js?v=7"></script>
+    <link rel="stylesheet" href="/static/style.css?v=44" />
   </head>
   <body>
     <a class="skip-link" href="#track-section">Naar de nummers</a>
     <div class="christmas-hearth" aria-hidden="true">
       <div class="hearth-photo"></div>
+      <video
+        id="hearth-video"
+        class="hearth-video"
+        muted
+        loop
+        playsinline
+        preload="none"
+        disablepictureinpicture
+        disableremoteplayback
+        aria-hidden="true"
+        tabindex="-1"
+        data-src="/static/christmas-fire.mp4?v=1"
+      ></video>
       <div class="hearth-matte"></div>
       <div class="christmas-lights"></div>
       <div class="christmas-snow">
@@ -44,7 +57,17 @@
             >Muziek voor thuis</span
           ></a
         >
-        <span class="season-greeting">Een plaatje bij de haard.</span>
+        <span class="season-greeting"
+          >Een plaatje bij de haard.
+          <a
+            class="hearth-credit"
+            href="https://commons.wikimedia.org/wiki/File:Kaminfeuer.webm"
+            target="_blank"
+            rel="noopener"
+            title="Haardvideo: Larvis · CC BY-SA 4.0 · bewerkt"
+            >Haardbeeld ↗</a
+          ></span
+        >
       </header>
       <nav class="source-bar" aria-label="Muziekbron">
         <div class="sources">
