@@ -144,6 +144,22 @@ class OfflineArchiveTests(unittest.TestCase):
         self.disc={'id':'TESTDISC1','tracks':[{'number':n,'sectors':75} for n in (1,2,3)]}
         self.a.attach(self.disc)
     def wav(self,path):path.write_bytes(wav_header(RATE)+b'\1\0\1\0'*RATE)
+    def test_initial_server_check_is_bounded_and_failure_releases_wait(self):
+        started=time.monotonic()
+        self.assertFalse(self.a._await_initial_status(timeout=.02))
+        self.assertLess(time.monotonic()-started,.3)
+        self.assertFalse(self.a._register(self.disc,self.a.generation))
+        self.assertTrue(self.a._await_initial_status(timeout=.02))
+
+    def test_initial_server_result_skips_already_stored_tracks(self):
+        payload=copy.deepcopy(self.disc)
+        for track in payload['tracks']:track.update(uploaded=True,ready=True)
+        self.a.cloud.request.side_effect=None;self.a.cloud.request.return_value=payload
+        self.assertTrue(self.a._register(self.disc,self.a.generation))
+        self.a._rip=Mock(side_effect=AssertionError('redundant reread'))
+        self.assertFalse(self.a._produce_once());self.a._rip.assert_not_called()
+        self.assertTrue(self.a._await_initial_status(timeout=.02))
+
     def test_complete_file_reused_without_network_and_default_is_4x(self):
         path=self.a.stage/'TESTDISC1-1.wav';self.wav(path)
         self.a._rip=Mock(side_effect=AssertionError('reread'))

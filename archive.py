@@ -104,6 +104,7 @@ class Archive:
         self.server_error = None
         self.buffer_full = False
         self.registration_lock = threading.Lock()
+        self.initial_status = threading.Event()
         self.drive_blocked = False
         self.recovery_path = self.root/'data'/'archive-recovery.json'
         try:self.recovery=json.loads(self.recovery_path.read_text())
@@ -140,6 +141,7 @@ class Archive:
                         self.states[n] = {'storage':'skipped','ready':False}
                 self.remote = None
                 self.registered = None
+                self.initial_status = threading.Event()
                 self.reader_error=None;self.upload_error=None;self.server_error=None
                 for n in self.order:
                     count=self.failures.get(self._failure_key(disc['id'],n),0)
@@ -291,17 +293,19 @@ class Archive:
         return self.optical.busy()
 
     def monitor(self):
-        # Conversion of track 1 must become visible while track 2 is being read.
-        # Neither optical I/O nor a long upload may block playback readiness.
-        while not self.stopping.wait(1.5):
+        # Check immediately on attach, independently of the optical reader.
+        while not self.stopping.is_set():
             with self.lock:
-                if not self.disc: continue
-                identity=self.disc['id'];generation=self.generation;manifest=copy.deepcopy(self.disc)
+                manifest=copy.deepcopy(self.disc);generation=self.generation
+            if not manifest:
+                self.stopping.wait(.1)
+                continue
             try:
-                if not self._register(manifest,generation):continue
-                self._receive(self.cloud.request('/v1/discs/'+identity),generation)
+                if self._register(manifest,generation):
+                    self._receive(self.cloud.request('/v1/discs/'+manifest['id']),generation)
             except Exception:
                 with self.lock:self.server_error='Muziekserver tijdelijk onbereikbaar; lokale bestanden blijven bewaard.'
+            self.stopping.wait(1.5)
 
     def _receive(self, payload, generation):
         with self.lock:
@@ -413,6 +417,9 @@ class Archive:
                     if generation==self.generation:self.server_error='Muziekserver tijdelijk onbereikbaar; lokaal afspelen en veilig bewaren blijven mogelijk.'
                 if strict:raise
                 return False
+            finally:
+                with self.lock:
+                    if generation==self.generation:self.initial_status.set()
 
     def _produce_once(self):
         """Reserve one of two staging slots, then read at most one optical track."""
@@ -543,8 +550,20 @@ class Archive:
                 else:self._upload_one(job)
             finally:self.uploads.task_done()
 
+    def _await_initial_status(self, timeout=2):
+        # A healthy server can suppress redundant reads; an offline server may
+        # delay the first local read by at most this small fixed grace period.
+        with self.lock:event=self.initial_status if self.disc else None
+        return event.wait(timeout) if event is not None else False
+
     def run(self):
+        waited_generation=None
         while not self.stopping.is_set():
             self.wake.clear()
+            with self.lock:generation=self.generation if self.disc else None
+            if generation is not None and generation!=waited_generation:
+                self._await_initial_status()
+                waited_generation=generation
+            if self.stopping.is_set():break
             if not self._produce_once():
                 self.wake.wait(1)
