@@ -257,6 +257,12 @@ const cover =
           "none",
           "Reduced motion must suppress snowfall",
         );
+        assert.equal(
+          await page
+            .locator(".hearth-photo")
+            .evaluate((el) => getComputedStyle(el).animationName),
+          "none",
+        );
         await page.emulateMedia({ reducedMotion: "no-preference" });
         assert.equal(
           await page
@@ -265,6 +271,25 @@ const cover =
           "block",
         );
         assert.equal(await page.locator(".christmas-snow i").count(), 16);
+        assert.equal(
+          await page
+            .locator(".hearth-photo")
+            .evaluate((el) => getComputedStyle(el).animationName),
+          "hearth-approach",
+        );
+        assert.equal(
+          await page
+            .locator(".hearth-photo")
+            .evaluate((el) => getComputedStyle(el, "::after").animationName),
+          "hearth-flames",
+        );
+        assert.equal(
+          await page
+            .locator(".christmas-snow i")
+            .first()
+            .evaluate((el) => getComputedStyle(el).width),
+          "5px",
+        );
         assert.equal(
           await page
             .locator(".christmas-hearth")
