@@ -12,6 +12,8 @@ Uitgangspunt: de bestaande Pi/VPS-verdeling, runtimepaden, MPD/PipeWire en afspe
 
 ## Bewuste grenzen
 
+De onderstaande grenzen horen bij de voorbereiding. De afzonderlijk goedgekeurde Waitress-activering, VPS-uitrol, echte versleutelde backup en externe CI-controle zijn daarna uitgevoerd; zie [vervolguitrol](production-rollout-2026-11-07.md).
+
 - Geen ongevraagde VPS-uitrol, upgrade van distributiepakketten, speakerverbinding, fysieke driveprobe of databaseopruiming.
 - De nieuwe deploymenttool is conservatief: alleen gestopte/gepauzeerde CD met volledig bekende, complete archiefstatus. Een nog gepauzeerde lokale stream wordt geweigerd. Afspelen wordt nooit automatisch gestart om een deployment mogelijk te maken.
 - De normale Pi-service blijft app.py gebruiken tot een afzonderlijk beoordeeld unitvoorstel wordt geïnstalleerd. player_server.py biedt Waitress met één runtime-eigenaar en meerdere threads; import via een willekeurige multiworker-WSGI-starter is geen ondersteunde installatie.

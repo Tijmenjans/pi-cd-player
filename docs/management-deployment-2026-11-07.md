@@ -16,6 +16,8 @@ Op 7 november 2026 is runtimecommit **01963cf097dbb6836a9b45cd3c91ac0dbe03cb46**
 
 De private backup op de Pi heet `/home/tijmen/cdspeler/backups/deploy-a1hjo8g4`. Plan, resultaat, verificatie en testlogs staan buiten Git op de Mac onder `backups/management-01963cf/`. De oorspronkelijke privéconfiguratie/backups en binaire installaties blijven behouden. Geen systemd-unit, speakerinstelling, VPS-configuratie of pakketinstallatie gewijzigd.
 
-## Nog afzonderlijk uit te voeren
+## Destijds nog afzonderlijk uit te voeren
+
+Deze punten zijn inmiddels uitgevoerd; zie [vervolguitrol](production-rollout-2026-11-07.md). Onderstaande tekst beschrijft de stand bij de oorspronkelijke runtime-uitrol.
 
 De CI-workflow is gepusht; de externe runstatus is vanuit deze sessie niet bevestigd. Verplichte branchchecks zijn niet ingesteld. Waitress/player_server.py is getest en als optionele ingang voorbereid, maar de bestaande app.py-service is niet omgeschakeld. De VPS is niet uitgerold. Het externe private-backup-hulpmiddel is getest met synthetische data; een echte externe bestemming blijft een keuze van de eigenaar. Langdurige fysieke import, hoorbare Bluetooth en Apple-TV-weergave zijn niet opnieuw getest.

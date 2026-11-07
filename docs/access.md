@@ -1,6 +1,6 @@
 # Zelfstandig beheer vanuit dit project
 
-Deze repository en de private projectmappen zijn het vertrekpunt voor onderhoud. Oude chatwerkruimtes zijn niet meer nodig. De huidige broncode en tests staan in Git; de Pi draait de runtime van 01963cf. De feitelijke uitrol en herstelroute staan in management-deployment-2026-11-07.md (met de eerdere uitrol in pi-deployment-2026-11-07.md).
+Deze repository en de private projectmappen zijn het vertrekpunt voor onderhoud. Oude chatwerkruimtes zijn niet meer nodig. De huidige broncode en tests staan in Git; de Pi draait de runtime van 01963cf. De huidige productie-ingang, VPS-uitrol, CI en externe backup staan in production-rollout-2026-11-07.md; de runtime-uitrol en herstelroute staan in management-deployment-2026-11-07.md (met de eerdere uitrol in pi-deployment-2026-11-07.md).
 
 ## Pi
 
