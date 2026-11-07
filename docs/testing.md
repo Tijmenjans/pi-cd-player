@@ -26,3 +26,9 @@ De HTTP-tests controleren responsegegevens vóór voltooiing, gelijktijdige heal
 `make check-hardware ALLOW_INTEGRATION=1` start uitsluitend de bestaande synthetische MPD/null-/recorderproeven. Dit vereist een vrijgegeven omgeving met geschikte MPD. Gewone CI start deze proeven niet. USB-resets, beschadigde cd's, hoorbare bronwissels, Bluetooth, fysieke eject en DVD op Apple TV blijven afzonderlijke praktijkcontroles.
 
 Historisch: op 7 november slaagden de eerste 125 offline tests; na de betrouwbaarheidscorrecties 151 op Mac én Pi. Bij uitrol van 70eb61f slaagden twee echte, geïsoleerde MPD-tests voor groeiende WAV/seek na unlink en crossfade. Zie pi-deployment-2026-11-07.md. Die uitkomsten zijn geen bewijs dat latere bronwijzigingen al live of op hardware zijn getest.
+
+## Resultaat onderhoudsstandaardisatie
+
+Release 01963cf: 217 tests op de Mac, frontendchecks en twee echte loopback-HTTP-tests geslaagd. Op de Pi slaagden 171 runtime-/configuratietests en twee geïsoleerde MPD-tests; de overige 46 Git-afhankelijke gereedschapstests zijn op de Mac uitgevoerd, omdat Git op de Pi ontbreekt. Native libdiscid heeft FEATURE_READ=1, overeenkomstig de adapter. Beide gewone discoveryvormen zijn getest. De externe GitHub-matrix is met de workflow aangevraagd maar niet via de terminal als geslaagd bevestigd.
+
+Voor een volledige broncode-stagingmap op een Pi zonder Git is nu `python3 tools/run_tests.py --runtime-only` beschikbaar. Dit is een standaard unittest-modulelijst; tests worden niet in de productieruntime geïnstalleerd. Gewone CI blijft de volledige suite uitvoeren. Dit profiel verandert geen runtimegegevens of services.

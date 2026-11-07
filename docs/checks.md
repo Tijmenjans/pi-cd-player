@@ -58,3 +58,5 @@ De Node-versie van action-internals staat los van de geteste Node 22-runtime.
 Deze workflow stelt **geen branch protection of verplichte mergechecks** in.
 Dat vereist afzonderlijke repository-instellingen. Een lokale geslaagde run
 betekent evenmin dat de GitHub-matrix al is uitgevoerd.
+
+Voor native verificatie vanuit een complete Pi-stagingmap zonder Git: `python3 tools/run_tests.py --runtime-only`. De Git-afhankelijke audit-/deploymentgereedschapstests blijven onderdeel van de volledige Mac/CI-suite. Productie krijgt uitsluitend runtimebestanden; er wordt geen volledige ontwikkelcheckout op de Pi bijgehouden.

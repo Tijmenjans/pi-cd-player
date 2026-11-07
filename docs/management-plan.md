@@ -30,3 +30,5 @@ make check-http
 ```
 
 Apply/rollback vereisen --apply en een veilig onderhoudsmoment. Zie deployment-tool.md, configuration.md, checks.md en private-backups.md. Het uitrolverslag beschrijft welke commit daadwerkelijk op de Pi draait; een hoger documentatiecommit hoeft geen andere runtime te betekenen.
+
+Uitgevoerd en gevalideerd: runtime 01963cf is via de nieuwe procedure op de veilig gepauzeerde Pi geplaatst. Zie management-deployment-2026-11-07.md voor de gecontroleerde eindtoestand en de bewuste grenzen.
