@@ -53,3 +53,9 @@ Een rollback zonder --apply schrijft niets en leest de backup niet op afstand. E
 Getest tijdens implementatie: 33 specifieke offline deploymenttests, met onder meer drift, lock-exclusiviteit, padtraversal, corrupte backups, activiteit, gewijzigde positie, mislukte healthcheck, gedeeltelijke schrijffout en historische rollback. Geen live verbindingen of deployments uitgevoerd.
 
 Een veiligheidsbackup na terugzetten naar een historische installatie zonder release-marker kan eveneens expliciet worden teruggezet. De tool valideert daarvoor ook ontbrekende bestanden en het volledige historische bestandenset; geen force- of drift-override.
+
+### Afzonderlijke overname van een gepauzeerde lokale track
+
+`python3 tools/paused_handoff.py` toont alleen een plan. De expliciete `--apply`-route neemt de exclusieve onderhoudslease, verifieert de bestaande installatie, vereist een volledig opgeslagen album en pauzestand, controleert de servertrack met HEAD en bewaart een privé-checkpoint onder backups/paused-handoff-*. De overname vervangt uitsluitend de huidige lokale MPD-entry door dezelfde servertrack via seekid op dezelfde positie. De volgende entries en consume-instelling blijven behouden. Geen play, stop, clear, speakerverbinding of serviceherstart. Bij fouten wordt de oorspronkelijke gepauzeerde URI hersteld; ook verloren add-/delete-bevestigingen moeten worden afgehandeld. Dit is een afzonderlijke onderhoudsactie; gewone playback blijft de lokale bron tot trackeinde pinnen.
+
+Gebruik dit alleen na een geslaagde geïsoleerde native MPD-proef voor de geïnstalleerde MPD-versie. De standaard deploymenttool blijft lokale pauzetokens weigeren; de aparte overname moet eerst aantoonbaar slagen. Alleen daarna volgt een gewone apply met ongewijzigde veiligheidscontroles.
