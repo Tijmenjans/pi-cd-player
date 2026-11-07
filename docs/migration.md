@@ -1,6 +1,6 @@
 # Overdracht — 7 november 2026
 
-Werkmap begon leeg met bestaande .git, zonder commits/remote. Vertrekpunt: vinyl-current-delivery onder Documents/Codex/2026-10-30/die-je-de-ufo202-aangesloten-op/work; het opgegeven tar.gz is als secundair archief geïnventariseerd, niet blind uitgepakt. Geen toepasselijke AGENTS.md in die bron gevonden. README is bewaard als historical-delivery.md.
+Werkmap begon leeg met bestaande .git, zonder commits/remote. Vertrekpunt was het historische afleverpakket vinyl-current-delivery; het bijbehorende broncodearchief is als secundaire bron geïnventariseerd, niet blind uitgepakt. Een geverifieerde projectlokale kopie staat nu buiten Git onder backups/legacy-original/. Geen toepasselijke AGENTS.md in die bron gevonden. README is bewaard als historical-delivery.md.
 
 Pi /home/tijmen/cdspeler is alleen-lezen geïnventariseerd. Runtime-Pythonmodules uit het pakket waren gelijk aan de Pi. Ontbrekende modules (catalogue, music_metadata, queueing, Spotify en Plexamp), aanvullende tests, service-/audiovoorbeelden en de tweede gecontroleerde catalogusentry zijn gericht overgenomen. Alle vijf static-bestanden en beide catalogusentries hebben dezelfde SHA-256 als de Pi. docs/source-inventory.json legt de vergelijking vóór reorganisatie vast; paden daarin zijn oorspronkelijke runtimepaden. Deploymentbestanden zijn daarna onder deploy/ geplaatst.
 
@@ -15,3 +15,5 @@ Ontbreekt bewust: privéconfiguratie, runtime-data en derdepartijbinaries. Open 
 Git-controle: 90 bestanden; geen credentialpatronen of bestanden boven 2 MiB na controle van de expliciete voorbeeldtoken. Grootste binary is de bestaande haardfoto (451349 bytes). Bestaande whitespace in twee servicebestanden en static/index.html is behouden om de bronovername byte-identiek te houden. De historische deploy.py met toenmalige hashes is niet opgenomen als bruikbaar deploymentscript.
 
 Vervolg: origin is inmiddels git@github.com:Tijmenjans/pi-cd-player.git en de overdrachtscommit 44939f4 is daar geverifieerd. De inventaris hierboven blijft het historische migratiemoment beschrijven. De daaropvolgende betrouwbaarheidswijzigingen staan in improvements.md en zijn afzonderlijk getest; hun bronbestanden zijn vanzelfsprekend niet meer byte-identiek aan de historische productiesnapshot. Er is nog geen live deployment uitgevoerd.
+
+Beheer is daarna volledig naar dit project overgebracht: actuele code/tests/documentatie in Git, de bestaande Pi-sleutel onder de genegeerde .ssh/-map en herstelarchieven onder backups/. Gebruik tools/pi-ssh en tools/vps-ssh; oude chatwerkruimtes zijn geen functionele afhankelijkheid meer. Zie access.md.

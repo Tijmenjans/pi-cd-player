@@ -1,0 +1,4 @@
+#!/bin/bash
+# Reuse normal macOS SSH/Keychain configuration; no credentials in this repo.
+set -euo pipefail
+exec ssh "${CDSPELER_VPS_TARGET:-hetzner-coolify}" "$@"

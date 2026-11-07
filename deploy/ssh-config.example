@@ -1,0 +1,8 @@
+# Optional example for the normal Mac ~/.ssh/config, not runtime configuration.
+# Keep existing entries; substitute your own host if the server address changes.
+Host hetzner-coolify
+    HostName 204.168.228.131
+    User root
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes
+    UseKeychain yes

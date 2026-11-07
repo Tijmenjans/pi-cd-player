@@ -4,6 +4,10 @@ Overgenomen bestaande Raspberry Pi-mediaspeler met CD, DVD, Vinyl, Spotify en Pl
 
 De Pythonmodules, `static/` en `catalogue/` blijven in de projectroot: de bestaande imports en paden zijn daarvan afhankelijk. `archive-server/` bevat de bestaande VPS-software, `tests/` de controles en `deploy/` de installatievoorbeelden. Een extra `player/`-laag zou onnodig werkende paden veranderen.
 
+## Beheer en toegang
+
+Werk voortaan vanuit dit project. Gebruik `./tools/pi-ssh` voor de Pi en `./tools/vps-ssh` voor de VPS. De Pi-sleutel en herstelarchieven staan lokaal afgeschermd en buiten Git; zie [toegang en private backups](docs/access.md). Oude chatwerkruimtes zijn niet meer nodig.
+
 ## Ontwikkelen en testen
 
 ```sh

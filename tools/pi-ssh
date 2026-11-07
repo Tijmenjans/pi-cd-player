@@ -1,0 +1,15 @@
+#!/bin/bash
+# Project-local Pi access. Never print or copy key contents.
+set -euo pipefail
+project_root="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+identity="${CDSPELER_PI_KEY:-$project_root/.ssh/pi_ed25519}"
+if [[ ! -f "$identity" ]]; then
+  echo "Pi-sleutel ontbreekt. Zie docs/access.md voor de lokale inrichting." >&2
+  exit 1
+fi
+options=(-i "$identity" -o IdentitiesOnly=yes -o BatchMode=yes)
+if [[ "${1:-}" == --tty ]]; then
+  options+=(-t)
+  shift
+fi
+exec ssh "${options[@]}" "${CDSPELER_PI_TARGET:-tijmen@192.168.1.232}" "$@"

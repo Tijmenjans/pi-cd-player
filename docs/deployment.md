@@ -1,6 +1,6 @@
 # Deployment en installatiegrenzen
 
-Actuele status: de Pi is bijgewerkt naar 70eb61f; de VPS is ongewijzigd. Zie [uitrolverslag](pi-deployment-2026-11-07.md). De onderstaande procedure beschrijft ook toekomstige updates. Productie blijft `/home/tijmen/cdspeler` op Pi 192.168.1.232 (tijmen, armv7l, 32-bit Raspbian 13); VPS via bestaande SSH-alias `hetzner-coolify`. Gebruik bestaande SSH-authenticatie; sleutels horen niet in de repository. Sudo vereist normaal een wachtwoord.
+Actuele status: de Pi is bijgewerkt naar 70eb61f; de VPS is ongewijzigd. Zie [uitrolverslag](pi-deployment-2026-11-07.md). De onderstaande procedure beschrijft ook toekomstige updates. Productie blijft `/home/tijmen/cdspeler` op Pi 192.168.1.232 (tijmen, armv7l, 32-bit Raspbian 13); VPS via bestaande SSH-alias `hetzner-coolify`. Gebruik tools/pi-ssh en tools/vps-ssh zoals beschreven in access.md; de private Pi-sleutel staat in de genegeerde .ssh/-map en hoort nooit in Git. Sudo vereist normaal een wachtwoord.
 
 ## Bestaande installatie bijwerken
 
