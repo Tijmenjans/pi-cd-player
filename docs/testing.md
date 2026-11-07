@@ -15,3 +15,5 @@ De verbeteringsronde voegt tests toe voor offline WAV-hergebruik, begrensde buff
 Resultaat van deze verbeteringsronde op Mac/Python 3.14: **149 offline Python-tests geslaagd**, inclusief 24 nieuwe fout-/herstel-/concurrencycontroles. Frontendtests slagen ook met de buffer-volmelding, naast bestaande bronrace-, DVD- en herstelcontroles. Pythoncompilatie, JavaScript-syntaxis en CLI-help van beide nieuwe hulpmiddelen zijn gecontroleerd. Geen tests op de Pi/VPS, echte MPD, FFmpeg-conversie, USB, Bluetooth of Apple TV uitgevoerd.
 
 Uitrolvoorbereiding: twee extra regressies controleren de begrensde eerste serverstatuscontrole en het overslaan van reeds opgeslagen tracks; totaal 151 offline tests. Een geïsoleerde echte MPD op de Pi met null-output bevestigde dat seekid naar een vervangende stream de pauzestand en positie behoudt. Dit was geen hoorbare of optische hardwaretest.
+
+Na de Pi-uitrol zijn de 151 regressies ook in Pi-staging geslaagd en zijn beide echte MPD-integratietests met stille uitvoer uitgevoerd. Zie pi-deployment-2026-11-07.md; USB-, Bluetooth-luister- en DVD-weergavecontroles zijn daarvan uitdrukkelijk gescheiden.

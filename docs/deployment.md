@@ -1,6 +1,6 @@
 # Deployment en installatiegrenzen
 
-Deze migratie voert geen deployment uit. Productie blijft `/home/tijmen/cdspeler` op Pi 192.168.1.232 (tijmen, armv7l, 32-bit Raspbian 13); VPS via bestaande SSH-alias `hetzner-coolify`. Gebruik bestaande SSH-authenticatie; sleutels horen niet in de repository. Sudo vereist normaal een wachtwoord.
+Actuele status: de Pi is bijgewerkt naar 70eb61f; de VPS is ongewijzigd. Zie [uitrolverslag](pi-deployment-2026-11-07.md). De onderstaande procedure beschrijft ook toekomstige updates. Productie blijft `/home/tijmen/cdspeler` op Pi 192.168.1.232 (tijmen, armv7l, 32-bit Raspbian 13); VPS via bestaande SSH-alias `hetzner-coolify`. Gebruik bestaande SSH-authenticatie; sleutels horen niet in de repository. Sudo vereist normaal een wachtwoord.
 
 ## Bestaande installatie bijwerken
 
@@ -30,7 +30,7 @@ Broncode in archive-server/ hoort in /opt/cd-archive. compose.yaml beschrijft de
 
 ## Uitrol van de beoordeelde verbeteringen
 
-Deze wijzigingen zijn alleen in Git voorbereid. Neem bij toekomstige uitrol ook de nieuwe runtime-module state_store.py mee. Installeer de Pi-modules, DVD-module en frontend uit dezelfde commit; start de app via app.py, zodat start_runtime() werkelijk wordt aangeroepen. Import door een willekeurige WSGI-starter start bewust geen workers. Houd één proces als runtime-eigenaar. Rol pas uit wanneer muziek, DVD en imports klaar zijn; laat alle bestaande data en vendor-assets staan.
+De Pi-wijzigingen zijn uitgerold; de VPS-wijzigingen zijn alleen in Git voorbereid. Neem bij toekomstige uitrol ook de nieuwe runtime-module state_store.py mee. Installeer de Pi-modules, DVD-module en frontend uit dezelfde commit; start de app via app.py, zodat start_runtime() werkelijk wordt aangeroepen. Import door een willekeurige WSGI-starter start bewust geen workers. Houd één proces als runtime-eigenaar. Rol pas uit wanneer muziek, DVD en imports klaar zijn; laat alle bestaande data en vendor-assets staan.
 
 Backup vóór VPS-uitrol ook de SQLite-database met een consistente SQLite-backup en de bestaande code. initialize() voegt de tabel plex_refresh toe zonder bestaande tracks te herschrijven. Bij rollback kan de vorige versie die extra tabel negeren. Behoud raw-, unmatched- en music-bestanden altijd. Startup controleert maximaal 1000 raw-mappen en een tijdsbudget van 10 seconden tussen bestanden; een reeds begonnen bestandscontrole wordt afgemaakt. Voor een groter archief kan tijdens gepland onderhoud expliciet `python3 -c 'import server; server.initialize(); print(server.reconcile_raw(limit=100000, seconds=3600))'` vanuit /opt/cd-archive worden uitgevoerd. Dit leest en registreert volledige WAVs; het verwijdert niets. Dit commando is tijdens de ontwikkeling niet op de VPS uitgevoerd.
 

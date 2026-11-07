@@ -1,6 +1,6 @@
 # Uitgevoerde verbeteringsronde
 
-De drie onderzoeksrichtingen zijn in de bestaande code verwerkt; er is geen nieuwe installatie gebouwd en niets live uitgerold.
+De drie onderzoeksrichtingen zijn in de bestaande code verwerkt; er is geen nieuwe installatie gebouwd. De Pi-onderdelen zijn inmiddels uitgerold naar 70eb61f; de VPS is ongewijzigd. Zie [uitrolverslag](pi-deployment-2026-11-07.md).
 
 | Onderdeel | Resultaat |
 |---|---|
