@@ -69,3 +69,10 @@ Vinylweergave op de Pi wordt gedeactiveerd; externe DVD-weergave blijft zelfstan
 Ook starten zonder verbonden speaker wordt afgevangen. Onbekende meetstatus
 veroorzaakt geen pauze; een andere verbonden Bluetooth-speaker voorkomt pauzeren.
 CD-positie en wachtrij blijven behouden en imports blijven doorlopen.
+
+Praktijkcontrole automatische pauze (9 november 2026, release `39a80ef`):
+na verbreken van de DAB-18-verbinding werd Plex gepauzeerd met geen enkele
+Bluetooth-uitgang verbonden. Pauze bleef behouden. Opnieuw verbinden startte
+Hitshuffle weer (Ain't It Funny). Alle 10 cd-tracks bleven opgeslagen.
+274 offline tests en frontendcontroles geslaagd; CD-pauze behoudt positie/wachtrij
+door uitsluitend `pause 1` te sturen. Herstelbackup: `deploy-6d_j8ugv`.
