@@ -180,6 +180,28 @@ def start_speaker_playlist():
             raise
 
 
+def pause_without_speaker():
+    if not SETTINGS.speaker_pause_without_bluetooth or not transition_lock.acquire(blocking=False):
+        return
+    try:
+        with action_lease(ROOT/'.deployment.lock'):
+            if audio.snapshot().get('bluetooth_speaker_connected') is not False:
+                return
+            if source == 'cd':
+                if values(mpd('status')[0]).get('state') == 'play':
+                    mpd('pause 1')
+            elif source == 'plexamp':
+                if plexamp.snapshot().get('state') in ('playing', 'buffering'):
+                    plexamp.command('pause')
+            elif source == 'spotify':
+                if spotify.snapshot().get('state') == 'playing':
+                    spotify.command('pause')
+            elif source == 'vinyl':
+                vinyl.set_active(False)
+    finally:
+        transition_lock.release()
+
+
 def get_json(url):
     req = urllib.request.Request(url, headers={
         'User-Agent': 'CDSpeler/1.0 (personal Raspberry Pi player)',
@@ -919,7 +941,7 @@ def start_runtime():
                 threading.Thread(target=enrich,args=(dict(disc),),daemon=True).start()
             workers=[archive.run,archive.upload_loop,archive.monitor,scan_loop,queue_loop,
                      lambda: audio.observe(runtime_stop),lambda: vinyl.observe(runtime_stop),
-                     lambda: speaker_autoplay.observe(audio.snapshot,start_speaker_playlist,runtime_stop),
+                     lambda: speaker_autoplay.observe(audio.snapshot,start_speaker_playlist,runtime_stop,pause_without_speaker),
                      lambda: spotify.observe(runtime_stop),
                      lambda: plexamp.observe(lambda:source=='plexamp',runtime_stop),
                      lambda: plexamp.observe_metadata(runtime_stop),lambda: dvd.observe(runtime_stop)]

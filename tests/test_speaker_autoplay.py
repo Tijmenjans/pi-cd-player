@@ -57,3 +57,41 @@ class SpeakerAutoplayTests(unittest.TestCase):
             self.assertEqual(parse_qs(urls[0].query)['paused'],['1'])
             self.assertEqual(parse_qs(urls[1].query)['shuffle'],['1'])
             self.assertNotIn('token', urls[0].query.lower())
+
+    def test_pause_cd_preserves_position_and_queue(self):
+        from dataclasses import replace
+        settings=replace(player.SETTINGS,speaker_pause_without_bluetooth=True)
+        with patch.object(player,'SETTINGS',settings), patch.object(player,'source','cd'), patch.object(player.audio,'snapshot',return_value={'bluetooth_speaker_connected':False}), patch.object(player,'mpd',side_effect=[[['state: play']], [[]]]) as mpd:
+            player.pause_without_speaker()
+            self.assertEqual([c.args for c in mpd.call_args_list],[('status',),('pause 1',)])
+
+    def test_connected_other_speaker_or_unknown_prevents_pause(self):
+        from dataclasses import replace
+        settings=replace(player.SETTINGS,speaker_pause_without_bluetooth=True)
+        for connected in (True,None):
+            with patch.object(player,'SETTINGS',settings), patch.object(player.audio,'snapshot',return_value={'bluetooth_speaker_connected':connected}), patch.object(player,'mpd') as mpd:
+                player.pause_without_speaker()
+                mpd.assert_not_called()
+
+    def test_missing_speaker_pauses_at_startup_but_unknown_does_not(self):
+        from speaker_autoplay import observe
+        from unittest.mock import Mock
+        class Stop:
+            ticks=0
+            def is_set(self):return self.ticks>=5
+            def wait(self,delay):self.ticks+=1
+        for value,expected in ((False,4),(True,0),(None,0)):
+            pause=Mock()
+            observe(lambda:{'type':'aux','bluetooth_speaker_connected':value},Mock(),Stop(),pause)
+            self.assertEqual(pause.call_count,expected)
+
+    def test_audio_sink_inventory_distinguishes_other_speaker(self):
+        from audio import bluetooth_speakers
+        node=lambda kind,api:{'info':{'props':{'media.class':kind,'device.api':api}}}
+        self.assertTrue(bluetooth_speakers([node('Audio/Sink','bluez5')]))
+        self.assertFalse(bluetooth_speakers([node('Audio/Source','bluez5'),node('Audio/Sink','alsa')]))
+
+    def test_native_pause_acknowledgement_is_accepted(self):
+        import io
+        with patch.object(plexamp.urllib.request,'urlopen',return_value=io.BytesIO(b'OK')):
+            plexamp.command('pause')

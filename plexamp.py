@@ -151,7 +151,8 @@ def request(path, **params):
         'X-Plex-Client-Identifier': 'cdspeler-web', 'X-Plex-Product': 'CDspeler',
         'Accept': 'application/xml'})
     with urllib.request.urlopen(req, timeout=2) as response:
-        return ET.fromstring(response.read())
+        data = response.read()
+        return ET.Element('Response', code='200') if data.strip() == b'OK' else ET.fromstring(data)
 
 
 def observe(enabled,stop=None):

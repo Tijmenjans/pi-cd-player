@@ -62,3 +62,10 @@ Shuffle-start: Caldera negeert `shuffle=1` tijdens `createPlayQueue`. Daarom wor
 de lijst gepauzeerd geladen, shuffle expliciet ingesteld en het volgende
 willekeurige nummer geselecteerd voordat de muziek begint. Ook het startnummer
 varieert daardoor; de oorspronkelijke eerste track wordt niet eerst afgespeeld.
+
+`speaker_pause_without_bluetooth: true` pauzeert CD, Plex of Spotify zodra twee
+metingen bevestigen dat geen enkele Bluetooth-audio-uitgang beschikbaar is.
+Vinylweergave op de Pi wordt gedeactiveerd; externe DVD-weergave blijft zelfstandig.
+Ook starten zonder verbonden speaker wordt afgevangen. Onbekende meetstatus
+veroorzaakt geen pauze; een andere verbonden Bluetooth-speaker voorkomt pauzeren.
+CD-positie en wachtrij blijven behouden en imports blijven doorlopen.
