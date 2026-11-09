@@ -46,3 +46,14 @@ Handmatig pauzeren of CD/een andere bron kiezen blijft gelden tot de speaker opn
 verbindt. Twee ontbrekende metingen bevestigen een verbroken verbinding;
 onbekende audiostatus telt niet als verbreking. Actieve DVD-weergave wordt overgeslagen.
 Een nieuwe wachtrij wordt nooit blind opnieuw verstuurd na een timeout.
+
+Praktijkcontrole 9 november 2026: op de Pi is release `2abef99` geïnstalleerd.
+DAB-18 start playlist Hitshuffle van Tijmens muziek via het native GET-endpoint
+`/player/playback/createPlayQueue` met de serveridentiteit en playlist-URI.
+Start bij verbonden speaker en start na een verbroken/herstelde Bluetooth-verbinding
+zijn bevestigd door actieve Plex-weergave op DAB-18. Handmatig kiezen van CD bleef
+na 12 seconden CD; de volgende nieuwe verbinding startte weer Plex. De lopende
+cd-import is na de toegestane onderhoudsonderbreking volledig afgerond (10/10).
+269 offline tests, frontendcontroles en 3 synthetische HTTP-tests geslaagd.
+Herstelbackups: `deploy-x0eojxy4` (oorspronkelijke code/configuratie) en
+`deploy-imsza1iu` (vorige autoplayrelease). Geen accounttokens opgenomen.
