@@ -74,3 +74,13 @@ Assets worden vooraf gestaged en geverifieerd, het volledige vorige code-/releas
 Een open synthetische HTTP-stream is in de echte loopback-test door een assets-update heen blijven lezen. De offline transactietests controleren ook geweigerde runtimewijzigingen, drift, gedeeltelijke schrijffouten en herstel zonder serviceopdrachten. De normale apply/rollback-grenzen zijn niet versoepeld. Een reeds geopende browser krijgt de nieuwe assets bij verversen; bestaande audiostreams blijven open.
 
 Eenmalige, nauw begrensde uitzondering: static/christmas-fire.mp4 mag met een expliciete --baseline-commit worden toegevoegd als het pad aantoonbaar ontbreekt. Alleen deze benoemde UI-video is toegestaan, met MP4-header en maximaal 2 MiB. Andere nieuwe bestanden blijven geweigerd. Herstel verwijdert een nieuw videobestand uitsluitend wanneer het checkpoint het oude pad als ontbrekend vastlegt. Zie fireplace-video.md.
+
+### Expliciet toegestane importonderbreking
+
+`apply --interrupt-import --apply` is uitsluitend voor een door de gebruiker toegestane
+onderhoudsonderbreking. De speler moet **stop** staan. Gezonde bekende onvoltooide
+importstatussen mogen dan worden hervat na de gewone webserviceherstart. Bestaande
+baseline-, hash-, backup-, lock- en healthcontroles blijven gelden. Blokkades,
+onbekende status, actieve/ gepauzeerde weergave en archieffouten blijven geweigerd.
+Een gedeeltelijk gelezen nummer wordt opnieuw gelezen; volledige WAVs blijven behouden.
+Zonder deze expliciete optie blijft volledig afgeronde opslag vereist.

@@ -100,8 +100,10 @@ def main(argv=None):
     parser.add_argument('--apply', action='store_true', help='Permit remote writes (apply, assets or rollback only)')
     parser.add_argument('--backup-id', help='Exact private backup ID for rollback')
     parser.add_argument('--dry-run', action='store_true', help='Local read-only plan, never remote writes')
+    parser.add_argument('--interrupt-import', action='store_true', help='Explicitly permit retrying an unfinished import; playback must be stopped')
     args = parser.parse_args(argv)
     try:
+        require(not args.interrupt_import or args.command == 'apply', '--interrupt-import requires apply')
         require(not (args.apply and args.dry_run), 'Choose --apply or --dry-run')
         require(not args.apply or args.command in ('apply', 'assets', 'rollback'), '--apply needs apply/assets/rollback command')
         if args.command == 'inspect':
@@ -116,7 +118,7 @@ def main(argv=None):
         require(args.backup_id is None, '--backup-id is only for rollback')
         bundle, baseline = build(ROOT, args.commit, args.baseline_commit)
         if args.command in ('apply','assets') and args.apply:
-            result = remote(ROOT, {'action': args.command, 'bundle': bundle, 'baseline': baseline,'root':args.root})
+            result = remote(ROOT, {'action': args.command, 'bundle': bundle, 'baseline': baseline,'root':args.root,'interrupt_import':args.interrupt_import})
         else:
             result = {'action': 'plan', 'remote_writes': False, 'remote_contact': False,
                       'root':args.root,'manifest': bundle['manifest'], 'baseline_provided': baseline is not None,

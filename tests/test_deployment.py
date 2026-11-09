@@ -205,6 +205,21 @@ class Transactions(unittest.TestCase):
                 with self.assertRaises(remote.Refused): self.apply()
         self.system = Fake(); del self.system.status_value['archive']
         with self.assertRaises(remote.Refused): self.apply()
+    def test_explicit_import_interruption_requires_stopped_player_and_healthy_states(self):
+        fake = Fake('stop')
+        status = fake.status()
+        status['archive']['stored'] = 0
+        status['archive']['states']['13']['storage'] = 'ripping'
+        status['archive']['states']['13']['ready'] = False
+        with self.assertRaises(remote.Refused):remote.safe_state(status, fake.state)
+        remote.safe_state(status, fake.state, interrupt_import=True)
+        for state in ('play', 'pause'):
+            with self.assertRaises(remote.Refused):
+                remote.safe_state(status, dict(fake.state, state=state), interrupt_import=True)
+        for storage in ('blocked', 'skipped', 'unknown'):
+            status['archive']['states']['13']['storage'] = storage
+            with self.assertRaises(remote.Refused):remote.safe_state(status, fake.state, interrupt_import=True)
+
     def test_local_pause_refused(self):
         self.system.url += '?local=stale'
         with self.assertRaises(remote.Refused): self.apply()

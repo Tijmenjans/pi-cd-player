@@ -107,7 +107,7 @@ def validate_bundle(bundle):
     return m, decoded
 
 
-def safe_state(s, mpd):
+def safe_state(s, mpd, interrupt_import=False):
     require(isinstance(s, dict) and s.get('source') == 'cd', 'Only inactive/paused CD is supported')
     require(not s.get('error') and not s.get('transition', {}).get('pending')
             and not s.get('transition', {}).get('active') and not s.get('transition', {}).get('error'), 'Unknown/error/transition status')
@@ -115,16 +115,27 @@ def safe_state(s, mpd):
     require(not s.get('player', {}).get('buffering'), 'Player buffering')
     require(not s.get('dvd', {}).get('streaming') and not s.get('vinyl'), 'DVD/vinyl active')
     a = s.get('archive', {})
-    require(type(a.get('total')) is int and type(a.get('stored')) is int
-            and a['total'] >= 0 and a['stored'] == a['total'], 'Imports incomplete or unknown')
-    require(not a.get('error') and not a.get('drive_blocked') and not a.get('buffer_full'), 'Archive not idle')
-    states = a.get('states')
-    require(isinstance(states, dict) and len(states) == a['total'], 'Unknown archive states')
-    require(all(isinstance(v, dict) and v.get('ready') is True and v.get('storage') == 'ready'
-                for v in states.values()), 'Imports pending')
-    tracks = s.get('disc', {}).get('tracks', [])
-    require(isinstance(tracks, list) and len(tracks) == a['total'], 'Unknown disc state')
-    require(all(t.get('ready') is True and t.get('storage') == 'ready' for t in tracks), 'Track imports pending')
+    if interrupt_import:
+        require(mpd.get('state') == 'stop', 'Import interruption requires stopped playback')
+        require(type(a.get('total')) is int and type(a.get('stored')) is int
+                and 0 <= a['stored'] <= a['total'], 'Unknown import counts')
+        require(not a.get('error') and not a.get('drive_blocked') and not a.get('buffer_full'), 'Archive unhealthy')
+        states = a.get('states')
+        require(isinstance(states, dict) and len(states) == a['total'], 'Unknown archive states')
+        require(all(isinstance(v, dict) and not v.get('archive_error') and
+                    v.get('storage') in ('ready', 'pending', 'ripping', 'uploading', 'retrying_upload', 'processing', 'buffered')
+                    for v in states.values()), 'Unsafe archive state')
+    else:
+        require(type(a.get('total')) is int and type(a.get('stored')) is int
+                and a['total'] >= 0 and a['stored'] == a['total'], 'Imports incomplete or unknown')
+        require(not a.get('error') and not a.get('drive_blocked') and not a.get('buffer_full'), 'Archive not idle')
+        states = a.get('states')
+        require(isinstance(states, dict) and len(states) == a['total'], 'Unknown archive states')
+        require(all(isinstance(v, dict) and v.get('ready') is True and v.get('storage') == 'ready'
+                    for v in states.values()), 'Imports pending')
+        tracks = s.get('disc', {}).get('tracks', [])
+        require(isinstance(tracks, list) and len(tracks) == a['total'], 'Unknown disc state')
+        require(all(t.get('ready') is True and t.get('storage') == 'ready' for t in tracks), 'Track imports pending')
     require(mpd.get('state') == s['player']['state'] and not mpd.get('error'), 'MPD disagrees with API')
     require(mpd['state'] in ('stop', 'pause'), 'MPD not idle')
     if mpd['state'] == 'pause':
@@ -148,12 +159,12 @@ def unchanged(before, after):
         require(abs(float(before['elapsed']) - float(after.get('elapsed', '-999'))) < .05, 'Position changed')
 
 
-def wait_idle(system,before,timeout=30):
+def wait_idle(system,before,timeout=30,interrupt_import=False):
     deadline=time.monotonic()+timeout
     while True:
         current=system.mpd('status');unchanged(before,current)
         try:
-            safe_state(system.status(),current)
+            safe_state(system.status(),current,interrupt_import)
             return
         except Refused:
             require(time.monotonic()<deadline,'Archive status did not settle after restart')
@@ -373,11 +384,11 @@ def assets_transaction(root, manifest, content, system, baseline=None):
             'web_pid_unchanged':True,'services_restarted':False,'changed':sorted(changed)}
 
 
-def transaction(root, manifest, content, system, baseline=None):
+def transaction(root, manifest, content, system, baseline=None, interrupt_import=False):
     require(root.is_dir(), 'Runtime root missing')
     system.verify_identity(root)
     old = baseline_check(root, manifest, baseline)
-    before = system.mpd('status'); status=system.status(); safe_state(status, before)
+    before = system.mpd('status'); status=system.status(); safe_state(status, before, interrupt_import)
     compatible_session(status, manifest['files'])
     mpd_pid = system.pid(); require(mpd_pid not in (b'', b'0', '', '0'), 'MPD process unknown')
     # Fail closed for old local stream tokens: require the separately tested
@@ -412,7 +423,7 @@ def transaction(root, manifest, content, system, baseline=None):
         verify(stage, manifest['files'])
         # Revalidate after backup and staging, immediately before stopping web.
         baseline_check(root, manifest, baseline)
-        safe_state(system.status(), system.mpd('status'))
+        safe_state(system.status(), system.mpd('status'), interrupt_import)
         unchanged(before, system.mpd('status'))
         system.verify_identity(root)
         stopped = False
@@ -427,10 +438,10 @@ def transaction(root, manifest, content, system, baseline=None):
             require(installed(root) == manifest, 'Release marker mismatch')
             system.service('start')
             system.healthy(manifest)
-            wait_idle(system,before)
+            wait_idle(system,before,interrupt_import=interrupt_import)
             verify(root, manifest['files'])
             require(installed(root) == manifest, 'Release marker changed')
-            safe_state(system.status(), system.mpd('status'))
+            safe_state(system.status(), system.mpd('status'), interrupt_import)
             unchanged(before, system.mpd('status'))
             require(system.pid() == mpd_pid, 'MPD process changed')
         except BaseException:
@@ -554,7 +565,7 @@ def dispatch(request, system=None, root=ROOT):
             return rollback(root, request['backup_id'], system)
         manifest, content = validate_bundle(request['bundle'])
         if action == 'assets':return assets_transaction(root, manifest, content, system, request.get('baseline'))
-        return transaction(root, manifest, content, system, request.get('baseline'))
+        return transaction(root, manifest, content, system, request.get('baseline'), request.get('interrupt_import') is True)
 
 
 def inspect_safe(system):
