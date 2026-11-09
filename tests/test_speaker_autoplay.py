@@ -44,10 +44,16 @@ class SpeakerAutoplayTests(unittest.TestCase):
 
     def test_native_queue_creation_and_confirmed_playback(self):
         import io
-        with patch.object(plexamp,'request',side_effect=[ET.Element('MediaContainer'),ET.fromstring('<MediaContainer><Timeline type="music" state="playing" /></MediaContainer>')]), patch.object(plexamp.urllib.request,'urlopen',return_value=io.BytesIO(b'OK')) as send:
+        from urllib.parse import urlsplit, parse_qs
+        import contextlib
+        timeline = lambda state, shuffle: ET.fromstring('<MediaContainer><Timeline type="music" state="'+state+'" shuffle="'+shuffle+'" /></MediaContainer>')
+        @contextlib.contextmanager
+        def response(*args, **kwargs):
+            yield io.BytesIO(b'OK')
+        with patch.object(plexamp,'request',side_effect=[ET.Element('MediaContainer'),timeline('paused','0'),timeline('playing','1')]), patch.object(plexamp.urllib.request,'urlopen',side_effect=response) as send:
             plexamp.start_playlist('server://example/playlists/123/items',threading.Event())
-            req=send.call_args.args[0]
-            self.assertEqual(req.get_method(),'GET')
-            self.assertIn('/player/playback/createPlayQueue?',req.full_url)
-            self.assertIn('source=example',req.full_url)
-            self.assertNotIn('token',req.full_url.lower())
+            urls=[urlsplit(call.args[0].full_url) for call in send.call_args_list]
+            self.assertEqual([url.path for url in urls],['/player/playback/createPlayQueue','/player/playback/setParameters','/player/playback/skipNext','/player/playback/play'])
+            self.assertEqual(parse_qs(urls[0].query)['paused'],['1'])
+            self.assertEqual(parse_qs(urls[1].query)['shuffle'],['1'])
+            self.assertNotIn('token', urls[0].query.lower())

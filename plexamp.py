@@ -247,7 +247,7 @@ def start_playlist(uri, stop):
     machine = urllib.parse.urlsplit(uri).netloc
     query = urllib.parse.urlencode({'uri': uri, 'source': machine,
                                    'machineIdentifier': machine, 'type': 'audio', 'shuffle': 1,
-                                   'repeat': 0, 'continuous': 1,
+                                   'repeat': 0, 'continuous': 1, 'paused': 1,
                                    'commandID': next(_commands)})
     req = urllib.request.Request(BASE + '/player/playback/createPlayQueue?' + query,
         headers={'X-Plex-Client-Identifier': 'cdspeler-web', 'X-Plex-Product': 'CDspeler'})
@@ -257,9 +257,33 @@ def start_playlist(uri, stop):
     deadline = time.monotonic() + 20
     while not stop.is_set():
         root = request('/player/timeline/poll', wait=0)
-        if any(t.get('type') == 'music' and t.get('state') == 'playing'
+        music = next((t for t in root.findall('Timeline') if t.get('type') == 'music'), None)
+        if music is not None and music.get('state') == 'paused':
+            break
+        if time.monotonic() >= deadline:
+            raise RuntimeError('Plex-playlist is niet klaargezet.')
+        stop.wait(.5)
+    if stop.is_set():
+        return
+    # Caldera ignores shuffle on createPlayQueue. Enable it on the loaded queue;
+    # keep playback paused until we have selected a random following item.
+    commands = [('setParameters', {'shuffle': 1}), ('skipNext', {}), ('play', {})]
+    if music.get('playQueueTotalCount') == '1':
+        commands = [commands[0], commands[2]]
+    for command, params in commands:
+        if stop.is_set():
+            return
+        query = urllib.parse.urlencode(dict(params, type='music', commandID=next(_commands)))
+        req = urllib.request.Request(BASE + '/player/playback/' + command + '?' + query,
+            headers={'X-Plex-Client-Identifier': 'cdspeler-web', 'X-Plex-Product': 'CDspeler'})
+        with urllib.request.urlopen(req, timeout=15) as response:
+            response.read(1024 * 1024)
+    deadline = time.monotonic() + 20
+    while not stop.is_set():
+        root = request('/player/timeline/poll', wait=0)
+        if any(t.get('type') == 'music' and t.get('state') == 'playing' and t.get('shuffle') == '1'
                for t in root.findall('Timeline')):
             return
         if time.monotonic() >= deadline:
-            raise RuntimeError('Plex-playlist is niet begonnen met afspelen.')
+            raise RuntimeError('Plex-playlist is niet begonnen met shuffle.')
         stop.wait(.5)

@@ -57,3 +57,8 @@ cd-import is na de toegestane onderhoudsonderbreking volledig afgerond (10/10).
 269 offline tests, frontendcontroles en 3 synthetische HTTP-tests geslaagd.
 Herstelbackups: `deploy-x0eojxy4` (oorspronkelijke code/configuratie) en
 `deploy-imsza1iu` (vorige autoplayrelease). Geen accounttokens opgenomen.
+
+Shuffle-start: Caldera negeert `shuffle=1` tijdens `createPlayQueue`. Daarom wordt
+de lijst gepauzeerd geladen, shuffle expliciet ingesteld en het volgende
+willekeurige nummer geselecteerd voordat de muziek begint. Ook het startnummer
+varieert daardoor; de oorspronkelijke eerste track wordt niet eerst afgespeeld.
