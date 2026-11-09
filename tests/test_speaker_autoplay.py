@@ -47,6 +47,7 @@ class SpeakerAutoplayTests(unittest.TestCase):
         with patch.object(plexamp,'request',side_effect=[ET.Element('MediaContainer'),ET.fromstring('<MediaContainer><Timeline type="music" state="playing" /></MediaContainer>')]), patch.object(plexamp.urllib.request,'urlopen',return_value=io.BytesIO(b'OK')) as send:
             plexamp.start_playlist('server://example/playlists/123/items',threading.Event())
             req=send.call_args.args[0]
-            self.assertEqual(req.method,'POST')
-            self.assertIn('/playQueues?',req.full_url)
+            self.assertEqual(req.get_method(),'GET')
+            self.assertIn('/player/playback/createPlayQueue?',req.full_url)
+            self.assertIn('source=example',req.full_url)
             self.assertNotIn('token',req.full_url.lower())

@@ -244,10 +244,12 @@ def start_playlist(uri, stop):
                 raise RuntimeError('Plex-speler start niet op.') from None
     if stop.is_set():
         return
-    query = urllib.parse.urlencode({'uri': uri, 'type': 'audio', 'shuffle': 1,
+    machine = urllib.parse.urlsplit(uri).netloc
+    query = urllib.parse.urlencode({'uri': uri, 'source': machine,
+                                   'machineIdentifier': machine, 'type': 'audio', 'shuffle': 1,
                                    'repeat': 0, 'continuous': 1,
                                    'commandID': next(_commands)})
-    req = urllib.request.Request(BASE + '/playQueues?' + query, data=b'', method='POST',
+    req = urllib.request.Request(BASE + '/player/playback/createPlayQueue?' + query,
         headers={'X-Plex-Client-Identifier': 'cdspeler-web', 'X-Plex-Product': 'CDspeler'})
     # Never retry a queue-creation request after an ambiguous response.
     with urllib.request.urlopen(req, timeout=15) as response:
