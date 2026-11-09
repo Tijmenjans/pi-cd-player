@@ -214,3 +214,50 @@ def command(name, seconds=None):
         request('/player/playback/' + paths[name], **params)
     except Exception as exc:
         raise RuntimeError('Plexamp reageert nog niet. Kies CDspeler in Plexamp en start een nummer.') from exc
+
+
+def prepare_playlist(machine, playlist_id):
+    """Validate the configured playlist before changing the active audio engine."""
+    if not playlist_id.isdecimal():
+        raise ValueError('Ongeldige Plex-playlist.')
+    token = json.loads(PREFERENCES.read_text())['plex']['token']
+    for base in server_urls(machine, token):
+        try:
+            playlist = remote(base + '/playlists/' + playlist_id, token).find('Playlist')
+            if (playlist is not None and playlist.get('playlistType') == 'audio'
+                    and int(playlist.get('leafCount', 0)) > 0):
+                return 'server://' + machine + '/com.plexapp.plugins.library/playlists/' + playlist_id + '/items'
+        except Exception:
+            continue
+    raise RuntimeError('Plex-playlist is niet beschikbaar of leeg.')
+
+
+def start_playlist(uri, stop):
+    """Use the native Companion queue-creation endpoint, including cold starts."""
+    deadline = time.monotonic() + 25
+    while True:
+        try:
+            request('/resources')
+            break
+        except Exception:
+            if time.monotonic() >= deadline or stop.wait(.5):
+                raise RuntimeError('Plex-speler start niet op.') from None
+    if stop.is_set():
+        return
+    query = urllib.parse.urlencode({'uri': uri, 'type': 'audio', 'shuffle': 1,
+                                   'repeat': 0, 'continuous': 1,
+                                   'commandID': next(_commands)})
+    req = urllib.request.Request(BASE + '/playQueues?' + query, data=b'', method='POST',
+        headers={'X-Plex-Client-Identifier': 'cdspeler-web', 'X-Plex-Product': 'CDspeler'})
+    # Never retry a queue-creation request after an ambiguous response.
+    with urllib.request.urlopen(req, timeout=15) as response:
+        response.read(1024 * 1024)
+    deadline = time.monotonic() + 20
+    while not stop.is_set():
+        root = request('/player/timeline/poll', wait=0)
+        if any(t.get('type') == 'music' and t.get('state') == 'playing'
+               for t in root.findall('Timeline')):
+            return
+        if time.monotonic() >= deadline:
+            raise RuntimeError('Plex-playlist is niet begonnen met afspelen.')
+        stop.wait(.5)

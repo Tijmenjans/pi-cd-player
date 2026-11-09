@@ -22,6 +22,7 @@ from maintenance_guard import guarded_action, action_lease, MaintenanceBusy
 from cd_session import completely_stored, load_ejected
 import spotify
 import plexamp
+import speaker_autoplay
 from dvd import DVD
 import dvd_streaming
 import audio
@@ -159,6 +160,24 @@ def _choose_source(new):
         raise RuntimeError(transition['error']) from exc
     finally:
         transition['active']=False
+
+
+def start_speaker_playlist():
+    if not SETTINGS.speaker_autoplay_playlist:
+        return
+    with action_lease(ROOT/'.deployment.lock'), transition_lock:
+        if source == 'dvd' or transition['active']:
+            return
+        uri = plexamp.prepare_playlist(SETTINGS.speaker_autoplay_server,
+                                       SETTINGS.speaker_autoplay_playlist)
+        previous = source
+        try:
+            choose_source('plexamp')
+            plexamp.start_playlist(uri, runtime_stop)
+        except Exception:
+            if source != previous:
+                choose_source(previous)
+            raise
 
 
 def get_json(url):
@@ -900,6 +919,7 @@ def start_runtime():
                 threading.Thread(target=enrich,args=(dict(disc),),daemon=True).start()
             workers=[archive.run,archive.upload_loop,archive.monitor,scan_loop,queue_loop,
                      lambda: audio.observe(runtime_stop),lambda: vinyl.observe(runtime_stop),
+                     lambda: speaker_autoplay.observe(audio.snapshot,start_speaker_playlist,runtime_stop),
                      lambda: spotify.observe(runtime_stop),
                      lambda: plexamp.observe(lambda:source=='plexamp',runtime_stop),
                      lambda: plexamp.observe_metadata(runtime_stop),lambda: dvd.observe(runtime_stop)]

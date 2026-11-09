@@ -16,6 +16,8 @@ class Settings:
     speaker_address: str = '6C:5C:3D:3C:2B:A3'
     vinyl_source: str = 'alsa_input.usb-Burr-Brown_from_TI_USB_Audio_CODEC-00.analog-stereo-input'
     web_threads: int = 8
+    speaker_autoplay_server: str = ''
+    speaker_autoplay_playlist: str = ''
 
     @property
     def audio_base_url(self):
@@ -46,4 +48,10 @@ class Settings:
         if type(settings.web_threads) is not int or not 4<=settings.web_threads<=32:raise ValueError('web_threads moet tussen 4 en 32 liggen')
         if not isinstance(settings.speaker_address,str) or not re.fullmatch(r'(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}',settings.speaker_address):raise ValueError('Ongeldig Bluetooth-adres')
         if not isinstance(settings.vinyl_source,str) or not re.fullmatch(r'[a-zA-Z0-9_.:-]{1,240}',settings.vinyl_source):raise ValueError('Ongeldige PipeWire-bron')
+        for field in ('speaker_autoplay_server', 'speaker_autoplay_playlist'):
+            value = getattr(settings, field)
+            if not isinstance(value, str) or not re.fullmatch(r'[A-Za-z0-9_-]{0,100}', value):
+                raise ValueError('Ongeldige Plex autoplay-identiteit')
+        if bool(settings.speaker_autoplay_server) != bool(settings.speaker_autoplay_playlist):
+            raise ValueError('Plex autoplay vereist server en playlist')
         return settings

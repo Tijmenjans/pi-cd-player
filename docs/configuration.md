@@ -33,3 +33,16 @@ Zonder --install worden alleen commando's getoond. Het testprofiel gebruikt requ
 player_server.py gebruikt Waitress 3.0.2, één proces en een begrensd aantal threads/connections/buffers. RuntimeOwner weigert een tweede hardware-eigenaar voor dezelfde installatie. /health voert geen hardwarecheck uit; /ready vereist gestarte levende workers. Speaker- of internetuitval maakt lokale bediening niet automatisch onbereikbaar. Releasevelden bevatten geen paden, tokens of bestandsmanifest.
 
 Waitress is een pure Python server met één proces en meerdere threads. De volledige requestbody wordt gebufferd; deze server is daarom alleen voor de Pi-entrypoint, niet als ongecontroleerde vervanging voor de VPS-WAV-uploadserver. Zie [Flask/Waitress](https://flask.palletsprojects.com/en/stable/deploying/waitress/) en [Waitress-bufferinstellingen](https://docs.pylonsproject.org/projects/waitress/en/stable/arguments.html).
+
+## Muziek bij verbinden van de speaker
+
+`speaker_autoplay_server` (Plex machine identifier) en `speaker_autoplay_playlist`
+(numerieke playlist ratingKey) schakelen automatische Plex-weergave in voor
+`speaker_address`. Beide velden zijn standaard leeg. Bestaande Caldera-accountgegevens
+blijven in hun privébestand. De playlist wordt vooraf op bereikbaarheid gecontroleerd.
+Bij een nieuwe verbinding begint de playlist in shuffle; ook bij starten van de Pi
+met een verbonden speaker. Iedere verbinding geeft maximaal één startpoging.
+Handmatig pauzeren of CD/een andere bron kiezen blijft gelden tot de speaker opnieuw
+verbindt. Twee ontbrekende metingen bevestigen een verbroken verbinding;
+onbekende audiostatus telt niet als verbreking. Actieve DVD-weergave wordt overgeslagen.
+Een nieuwe wachtrij wordt nooit blind opnieuw verstuurd na een timeout.

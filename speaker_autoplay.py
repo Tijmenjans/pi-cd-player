@@ -1,0 +1,39 @@
+"""One autoplay attempt per Bluetooth connection; manual choices then remain in force."""
+import logging
+
+log = logging.getLogger(__name__)
+
+
+class ConnectionTrigger:
+    def __init__(self):
+        self.connected = False
+        self.missing = 0
+
+    def update(self, connected):
+        # Unknown observations must not fabricate a disconnect/reconnect.
+        if connected is None:
+            return False
+        if not connected:
+            self.missing += 1
+            if self.missing >= 2:
+                self.connected = False
+            return False
+        self.missing = 0
+        if self.connected:
+            return False
+        self.connected = True
+        return True
+
+
+def observe(snapshot, start, stop):
+    trigger = ConnectionTrigger()
+    while not stop.is_set():
+        state = snapshot()
+        connected = None if state.get('type') == 'unknown' else state.get('speaker_connected', False)
+        if trigger.update(connected):
+            try:
+                start()
+            except Exception:
+                # URLs and account tokens may occur in network exceptions.
+                log.warning('Speaker autoplay kon niet starten; kies Plex of verbind de speaker opnieuw.')
+        stop.wait(2)
